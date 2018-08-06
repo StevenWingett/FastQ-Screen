@@ -1,0 +1,463 @@
+Release notes for FastQ Screen v0.12.1 (24 July 2018)
+-----------------------------------------------------
+
+Added --inverse option for filtering files.
+
+Improved results display format.
+
+
+
+Release notes for FastQ Screen v0.12.0 (15 June 2018)
+-----------------------------------------------------
+Interactive HTML graphs now made using Plotly.
+
+
+
+Release notes for FastQ Screen v0.11.4 (27 November 2017)
+---------------------------------------------------------
+FASTQ files are edited so that the third line of a read 
+is always a plus symbol.  This prevents tagged/filtered 
+output files not technically adhering to FASTQ format. 
+
+
+
+Release notes for FastQ Screen v0.11.3 (16 October 2017)
+--------------------------------------------------------
+FastQ Screen uses full path to dependencies rather than Bowtie,
+Bowtie2 etc.
+
+
+
+Release notes for FastQ Screen v0.11.2 (21 September 2017)
+----------------------------------------------------------
+Fixed bug preventing --tag being selected without --filter.
+
+In bisulfite mode, FastQ Screen no longer assumes that 
+Bowtie/Bowtie2 are always in the path (even if specified otherwise 
+in the config file).
+
+FastQ Screen now terminates before creating a subset file if no 
+aligner/Bismark executable file is found.
+
+FastQ Screen no longer gives an initialisation warning if, in the 
+configuration file, the DATABASE line does not specify a database 
+name and/or database path.
+
+
+
+Release notes for FastQ Screen v0.11.1 (23 February 2017)
+---------------------------------------------------------
+v0.11.1 is a minor release.
+
+Fixed bug preventing user selecting --filter option 4 or 5.
+
+
+
+Release notes for FastQ Screen v0.11.0 (22 February 2017)
+---------------------------------------------------------
+v0.11.0 is a major release.
+
+Added --filter options 4 and 5.  
+
+Added option --pass to further improve filtering.
+
+Prevented HTML bar graphs overlapping when screening against
+multiple genomes.
+
+Corrected documentation describing how to use the option --top.
+
+
+
+Release notes for FastQ Screen v0.10.0 (19 January 2017)
+-----------------------------------------------------------
+v0.10.0 is a major release.
+
+Added --top functionality for when faster processing times is the main 
+priority.
+
+Improved presentation of HTML graphs.
+
+
+
+Release notes for FastQ Screen v0.9.5 (07 December 2016)
+--------------------------------------------------------
+v0.9.5 is a minor release.
+
+Fixed bug causing FastQ Screen, when running in --bisulfite mode, to 
+mislabel species names in the HTML bisulfite read orientation graph 
+on the occasion that one or more of the samples tested contained 
+reads that mapped to none of the bisulfite converted reference genomes.
+
+
+
+Release notes for FastQ Screen v0.9.4 (21 November 2016)
+--------------------------------------------------------
+v0.9.4 is a minor release.
+
+New colour scheme which should be easily interpretable by colour blind
+people. 
+
+Fixed bug preventing, in some instances, genome names being displayed 
+in the header line of filtered (using the --filter option) FASTQ 
+files.
+
+
+
+Release notes for FastQ Screen v0.9.3 (31 October 2016)
+-------------------------------------------------------
+v0.9.3 is a minor release.
+
+Fixed bug stopping the command-line --threads option overriding 
+the configuration file. 
+
+When the --tag option was specified, FastQ Screen should have 
+analysed all the reads in a file by default. However, a bug resulted
+in a subset file being generated and analysed instead. This has been
+fixed and now a reduced reads file will only be generated with the 
+--tag option if explicitly requested using the --subset command.
+
+Fixed bug causing FastQ Screen to not process reads containing 
+a full-stop in the FASTQ read header.  
+
+Changes to what is reported when using the --quiet option
+
+Updated documentation.
+
+
+
+Release notes for FastQ Screen v0.9.2 (12 October 2016)
+-------------------------------------------------------
+v0.9.2 is a minor release.
+
+When --outdir option selected, FastQ Screen creates the output 
+directory if it does not already exist.
+
+FastQ Screen in bisulfite mode checks whether the bisulfite 
+orientation graph already exists.
+
+Adjusted how compressed files are read to improve compatibility 
+with Mac systems.
+
+Fixed bug causing the HTML report to be missing one genome when 
+reporting conventional (i.e. not bisulfite) alignment results
+
+Updated documentation.
+
+
+
+Release notes for FastQ Screen v0.9.1 (05 October 2016)
+-------------------------------------------------------
+v0.9.1 is a minor release.
+
+Fixed bug causing FastQ Screen to terminate prematurely when in 
+bisulfite mode if no reads map to a bisulfite reference genome.
+
+
+
+Release notes for FastQ Screen v0.9.0 (04 October 2016)
+-------------------------------------------------------
+v0.9.0 is a major release.
+
+FastQ Screen, when run in Bisulfite mode, reports to which strand 
+reads aligned (original top strand, complementary to original top 
+strand, complementary to original bottom strand, or original bottom 
+strand).
+
+
+
+Release notes for FastQ Screen v0.8.0 (08 September 2016)
+---------------------------------------------------------
+v0.8.0 is a major release.
+
+Program is now compatible with aligner BWA
+
+FastQ Screen produces an HTML summary report
+
+Program documentation has been substantially updated and is now in 
+Markdown format
+
+
+
+Release notes for FastQ Screen v0.7.0 (01 August 2016)
+------------------------------------------------------
+v0.7.0 is a major release.
+
+Added --tag option to create output FASTQ files in which the
+the genomes to which a read maps is appended to the first line
+of the FASTQ read.
+
+Added --filter option to extract reads from a tagged FASTQ file
+which map, or do not map, to a specified combination of genomes.
+
+Pre-existing option --nohits is now equivalent to the parameters
+--tag --filter 000 (number of zeroes corresponds to the number
+of genome being screened)
+
+
+
+Release notes for FastQ Screen v0.6.4 (12 July 2016)
+----------------------------------------------------
+v0.6.4 is a minor release.
+
+Program no longer terminates if a single Bismark reference genome 
+index is incorrectly specified.
+
+Fixed bug causing program to crash if --aligner bowtie2 and 
+--bisulfite specified together.
+
+FastQ Screen can now use Bowtie (in addition to Bowtie2) when 
+performing Bisulfite mapping with Bismark.
+
+Fixed bug in how FastQ Screen checks for dependencies 
+(e.g. SamTools).
+
+
+
+Release notes for FastQ Screen v0.6.3 (07 July 2016)
+----------------------------------------------------
+v0.6.3 is a minor release.
+
+Fixed bug causing --subset 0 to crash.
+
+Fixed bug in which the reported percentage reads mapping to no 
+libraries was, in some instances, an underestimate of the correct 
+value.
+
+
+
+Release notes for FastQ Screen v0.6.2 (05 July 2016)
+----------------------------------------------------
+v0.6.2 is a minor release.
+
+Updated help text.
+
+Refactored code.
+
+
+
+Release notes for FastQ Screen v0.6.1 (01 July 2016)
+----------------------------------------------------
+v0.6.1 is a minor release.
+
+Fixed bug causing program to crash in some instances when --outdir
+option selected.
+
+
+
+Release notes for FastQ Screen v0.6.0 (27 June 2016)
+----------------------------------------------------
+v0.6.0 is a major release.
+
+Compatible with Bismark, enabling bisulfite library QC.
+
+Use the option --bisulfite when processing bisulfite libraries. The 
+path to Bismark may be specified in the configuration file. 
+Bisulfite libraries cannot be processed simultaneously with 
+non-bisulfite libraries. Bismark can be downloaded from:
+www.bioinformatics.babraham.ac.uk/projects/bismark
+
+Option --colorspace is no longer supported.
+
+
+
+Release notes for FastQ Screen v0.5.2 (07 September 2015)
+---------------------------------------------------------
+v0.5.2 is a minor release.
+
+Fixed bug observed when --nohits option selected causing 
+initialization warnings, in some instances.
+
+
+
+Release notes for FastQ Screen v0.5.1 (14 July 2015)
+----------------------------------------------------
+v0.5.1 is a minor release. Program checks the  configuration to 
+ensure a FASTQ file is not mapped against the same library more 
+than once.
+
+
+
+Release notes for FastQ Screen v0.5.0 (29 June 2015)
+----------------------------------------------------
+v0.5.0 is a major release.
+
+Please note that users no longer need to specify whether a genome 
+index is compatible with bowtie or bowtie2, since this is now 
+determined automatically.
+
+Option --subset 100000 is now the default.  Use --subset 0 to 
+process an entire file (not recommended for most QC applications, 
+since this generally takes much more time). 
+
+Option --paired removed. Mapping forward or reverse reads 
+independently should be adequate to ascertain whether there is 
+contamination, and will also provide the user with additional 
+information if the forward reads are more prone generally to 
+contamination than the reverse reads (or vice versa). Also, 
+sometimes the script will fail to detect contamination in 
+--paired mode. For example, if the read pair did not 
+constitute a contiguous region of DNA, or if the paired reads 
+were separated by are large distance (such as RNA seq).
+
+Bowtie2 is now the default aligner, replacing the orignal bowtie.
+
+New option --force instructs FastQ Screen to overwrite extant output 
+files.
+
+The script now uses a more memory efficient internal data structure
+for recording which reads map to what library. However, this means
+that a maximum of 15 libraries may be specified with 32-bit Perl
+or 31 libraries with 64-bit Perl.
+
+
+
+Release notes for FastQ Screen v0.4.4
+-------------------------------------
+v0.4.4 is a minor release.
+
+Fixed a bug in the code which checked for the presence of bowtie2
+indices for large genomes.
+
+Added a nicer font for the graph and improved some of the colours
+
+Fixed the output file naming for .fq files and files with names
+ending in .gz.
+
+
+
+Release notes for FastQ Screen v0.4.3
+-------------------------------------
+v0.4.3 is a minor release. Fixed bug causing all reads to be 
+written to the 'no hits' output file when using Bowtie2 as the 
+aligner. Bowtie2 now runs with the parameters '--no-discordant' 
+and '--no-mixed' when mapping paired-end reads.  The 'nohits' 
+output file has the file extension '.fastq' and is compressed if 
+the input files are compressed.
+
+
+
+Release notes for FastQ Screen v0.4.2
+-------------------------------------
+v0.4.2 is a minor release. The script no longer defaults to 
+Bowtie if "--aligner" is not specified.  Instead, the script checks 
+the configuration file to determine if Bowtie/Bowtie2 paths and 
+indices  have been specified. If both Bowtie and Bowtie2 indices 
+have been specified, FastqScreen then defaults to the original 
+Bowtie. The script now reports the number of reads mapping each 
+genome in addition to percentages.
+
+
+
+Release notes for FastQ Screen v0.4.1
+-------------------------------------
+v0.4.1 is a minor release. A new command line argument has been 
+introduced (--aligner, -a) which enables the user to select the 
+sequence aligner to use; valid options are 'bowtie' (default) or 
+'bowtie2'. Fastq_screen now only uses one aligner per round of 
+screening and so if the configuration file lists paths to both bowtie 
+and bowtie2 libraries, only the libraries for the specified aligner 
+will be imported.
+
+Other changes:
+* The script will skip the production of graphs if GD::Graph is not 
+installed to prevent terminating in error.
+
+* Standard error is now reported as a separate file for each library.
+
+
+
+Release notes for FastQ Screen v0.4
+-----------------------------------
+v0.4 is a major release enabling FastQ Screen to use Bowtie2 as the 
+sequence aligner. Bowtie2 may be preferred since it is more efficient 
+than its predecessor at processing longer reads and can perform gapped 
+alignments. The configuration file instructs FastQ Screen as to which 
+aligner to use.  
+
+We would like to thank Patrick J Biggs (Institute of Veterinary, 
+Animal & Biomedical Sciences, Massey University, New Zealand) and 
+Saulo Alves Aflitos (Plant Research International, Wageningen, The 
+Netherlands) for suggesting this improvement.
+
+
+
+Release notes for FastQ Screen v0.3.1
+-------------------------------------
+v0.3.1 is a minor release fixing a bug that prevented the script
+receiving options using the Bowtie argument (--bowtie, -b).
+
+
+
+Release notes for FastQ Screen v0.3
+-----------------------------------
+v0.3 has new data analysis, output and file handling functionality.
+
+The most significant change is the removal of the multilib option.
+The script now calculates the percentage of sequences that map:
+i) uniquely to the specified genome but no others; ii) more than 
+once to the specified genome but to no others; iii) once to the
+specified genome and to other libraries; iv) more than once to
+the specified genome and other libraries as well; iv) to none of
+the reference genomes. Essentially, this combines the 
+functionality of selecting/not selecting multilib in the previous 
+version of FastQ Screen.
+
+Other changes:
+* A new option (--nohits) prints to an output file sequence reads or 
+read pairs that mapped to none of the reference genomes.  If used in 
+conjunction with the subset option, only reads/read pairs present in 
+the temporary subset file that failed to map to any genome will be 
+returned.
+
+* The script can now process zipped FASTQ files with the file extension 
+'gz'.
+
+* The --illumina flag has changed to --illumina1_3 in recognition of
+current Illumina sequencers now reporting in Sanger format.
+
+* The script can now process files with names that contain spaces. 
+
+
+
+Release notes for FastQ Screen v0.2.1
+-------------------------------------
+v0.2.1 is a minor release which fixes a bug in paired end multilib
+searches where the mapped percentage values reported are double the
+true values (leading to percentages >100% and corrupted graphs).
+
+Single end searches and searches using the default mode (rather than
+multilib) were unaffected.
+
+
+
+Release notes for FastQ Screen v0.2
+-----------------------------------
+v0.2 adds some new features and a new mode of analysis.
+
+The major change is a new way of analysing data called multilib mode.
+This mode is activated by passing the --multilib argument to the 
+program on the command line.  In this mode each individual sequence
+searched is tracked across all search libraries.  The single and
+multiple hits in the output therefore say how many sequences hit
+this, and only this, library, and how many hit this library and one
+or more other libraries.  In multilib mode it doesn't matter how
+many times a sequence could have been mapped in a given library, only
+whether it found a hit or not.
+
+Because multilib mode needs to record the pattern of hits for every
+single sequence searched it will have significantly higher memory
+usage than the default search mode, especially if run without the
+--subset option enabled.
+
+Other changes in this release are:
+
+* The addition of colorspace support via the --color option. To use
+  this option your bowtie indices will need to have been generated
+  with the colorspace flag set.
+
+* A new option (--conf) to manually specify a location for the config
+  file rather than using the default file installed with the program.
+  Makes it easy to switch between different sets of libraries.
+
+* A new option (--threads) to override the default setting in the conf
+  file for how many threads to parallelise your searches across.

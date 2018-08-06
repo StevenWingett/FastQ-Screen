@@ -1,0 +1,2503 @@
+#!/usr/bin/perl
+
+use warnings;
+use strict;
+use Getopt::Long;
+use FindBin qw($RealBin);
+use File::Copy;
+use File::Spec;
+use File::Basename;
+use File::Temp qw/ tempfile tempdir /;
+use Cwd;
+use Data::Dumper;
+
+
+our $VERSION = "0.12.1";
+
+###########################################################################
+###########################################################################
+##                                                                       ##
+## Copyright 2018, Simon Andrews    (simon.andrews@babraham.ac.uk)       ##
+##                 Steven Wingett   (steven.wingett@babraham.ac.uk)      ##
+##                 Felix Krueger    (felix.krueger@babraham.ac.uk)       ##
+##                 Mark Fiers       (Plant & Food Research, NZ)          ##
+##                                                                       ##
+## This program is free software: you can redistribute it and/or modify  ##
+## it under the terms of the GNU General Public License as published by  ##
+## the Free Software Foundation, either version 3 of the License, or     ##
+## (at your option) any later version.                                   ##
+##                                                                       ##
+## This program is distributed in the hope that it will be useful,       ##
+## but WITHOUT ANY WARRANTY; without even the implied warranty of        ##
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         ##
+## GNU General Public License for more details.                          ##
+##                                                                       ##
+## You should have received a copy of the GNU General Public License     ##
+## along with this program.  If not, see <http://www.gnu.org/licenses/>. ##
+###########################################################################
+###########################################################################
+
+unless (@ARGV) {    #Display a help message if no arguments specified
+    print while (<DATA>);
+    exit(0);
+}
+
+## Option variables
+my $subset_count;
+my $outdir;
+my $illumina;
+my $quiet;
+my $help;
+my $version;
+my $threads;
+my $conf;
+my $bowtie_opts;
+my $bowtie2_opts;
+my $bwa_opts;
+my $nohits;
+my $zip_data_output = 0;
+my $aligner;
+my $force;
+my $paired;
+my $bisulfite;
+my $tag;
+my $filter;
+my $top;
+my $skip = 0;    #Specified via $top variable
+my $pass;
+my $inverse;
+
+my $config_result = GetOptions(
+    "subset=i"    => \$subset_count,
+    "outdir=s"    => \$outdir,
+    "illumina1_3" => \$illumina,
+    "quiet"       => \$quiet,
+    "help"        => \$help,
+    "version"     => \$version,
+    "conf=s"      => \$conf,
+    "bowtie=s"    => \$bowtie_opts,
+    "bowtie2=s"   => \$bowtie2_opts,
+    "bwa=s"       => \$bwa_opts,
+    "threads=i"   => \$threads,
+    "nohits"      => \$nohits,
+    "aligner=s"   => \$aligner,
+    "force"       => \$force,
+    "paired"      => \$paired,
+    "bisulfite"   => \$bisulfite,
+    "tag"         => \$tag,
+	"filter=s"	  => \$filter,
+    "top=s"       => \$top,
+	"pass=i"	  => \$pass,
+	"inverse"     => \$inverse
+);
+
+die "Could not parse options, please adjust configuration.\n" unless ($config_result);
+
+if ($help) {
+    print while (<DATA>);
+    exit(0);
+}
+
+if ($version) {
+    print "FastQ Screen v$VERSION\n";
+    exit(0);
+}
+
+if ( defined $outdir ) {
+    unless ( -d $outdir ) {
+        warn "Output directory '$outdir' does not exist, creating directory\n";
+    	mkdir $outdir or die "Could not create '$outdir'\n";
+    }
+    unless ( -w $outdir ) {
+        die "Output directory '$outdir' is not writable, please adjust configuration.\n";
+    }
+    $outdir = File::Spec->rel2abs($outdir);    #Get absolute path
+} else {
+    $outdir = getcwd;
+}
+$outdir .= '/';                                #Add trailing forward slash, so don't need to do this again
+
+
+if(defined $filter){
+	die "Option --filter not in the correct format, see --help for more details.\n" unless($filter =~ /^[012345-]+$/);
+	die "Option --filter may not contain only hyphens '-'\n" if($filter =~ /^-+$/);
+	
+	if(!defined $tag){
+		process_tag_files(@ARGV);		
+		warn "Filtering complete.\n" unless ($quiet);
+		exit (0);
+	}
+}
+
+if(defined $pass){
+	die "Option --pass may only be used in conjunction with --filter" unless(defined $filter);
+	die "Option --pass needs to be at least one." if($pass < 1);
+	
+	my $non_active_filters = ($filter =~ tr/-//); #Count number of hyphens
+	my $filters_applied = (length $filter) - $non_active_filters;
+	
+	if($pass > $filters_applied){
+			warn "Option --pass requires a read to pass $pass filters, but only $filters_applied active filters by '$filter'\n";
+			die "Please adjust configuration\n";
+	}
+}
+
+if(defined $inverse){
+	die "Option --inverse may only be used in conjunction with --filter" unless(defined $filter);
+} else {
+	$inverse = 0;    #Set to 0 for later usage
+}
+
+if ( defined $aligner ) {
+    $aligner = lc $aligner;
+    if ( ( $aligner ne 'bowtie' ) and ( $aligner ne 'bowtie2' ) and ($aligner ne 'bwa'))  {
+        die "Valid options for --aligner are 'bowtie', 'bowtie2' or 'bwa' only.\n";
+    } elsif ( ( $aligner eq 'bowtie' ) and ( defined $bowtie2_opts ) ) {
+        die "Bowtie selected as the aligner yet bowtie2 options specified.\n"; 
+    } elsif ( ( $aligner eq 'bowtie' ) and ( defined $bwa_opts ) ) {
+        die "Bowtie selected as the aligner yet BWA options specified.\n";
+    } elsif ( ( $aligner eq 'bowtie2' ) and ( defined $bowtie_opts ) ) {
+        die "Bowtie 2 selected as the aligner yet bowtie options specified.\n";
+    } elsif ( ( $aligner eq 'bowtie2' ) and ( defined $bwa_opts ) ) {
+        die "Bowtie 2 selected as the aligner yet BWA options specified.\n";
+    } elsif ( ( $aligner eq 'bwa' ) and ( defined $bowtie_opts ) ) {
+        die "BWA selected as the aligner yet Bowtie options specified.\n";
+    } elsif ( ( $aligner eq 'bwa' ) and ( defined $bowtie2_opts ) ) {
+        die "BWA selected as the aligner yet Bowtie 2 options specified.\n";
+    }
+}
+
+$bowtie_opts  = '' unless ($bowtie_opts);     # Get undef warnings otherwise
+$bowtie2_opts = '' unless ($bowtie2_opts);
+$bwa_opts = '' unless ($bwa_opts);
+
+# Configuration
+my $number_of_threads = 1;
+my $path_to_bowtie = `which bowtie 2>/dev/null` eq '' ? undef : `which bowtie`;
+chomp $path_to_bowtie if(defined $path_to_bowtie);
+
+my $path_to_bowtie2 = `which bowtie2 2>/dev/null` eq '' ? undef : `which bowtie2`;
+chomp $path_to_bowtie2 if(defined $path_to_bowtie2);
+
+my $path_to_bismark = `which bismark 2>/dev/null` eq '' ? undef : `which bismark`;
+chomp $path_to_bismark if(defined $path_to_bismark);
+
+my $path_to_bwa = `which bwa 2>/dev/null` eq '' ? undef : `which bwa`;
+chomp $path_to_bwa if(defined $path_to_bwa);
+
+my $path_to_samtools = `which samtools 2>/dev/null` eq '' ? undef : `which samtools`;
+chomp $path_to_samtools if(defined $path_to_samtools);
+my @libraries;
+
+warn "Using fastq_screen v$VERSION\n" unless ($quiet);
+
+if ($paired) {
+    warn "Attention: option --paired removed in fastq_screen v0.5.0, processing data in single-end mode\n";
+}
+
+if(!defined $aligner and $bisulfite){
+	warn "Defaulting to Bowtie 2 for --bisulfite mode\n" unless ($quiet);
+	$aligner = 'bowtie2';
+}
+
+
+load_configuration($conf);
+
+# Override the configuration default if they've
+# manually specified a number of threads to use
+$number_of_threads = $threads if ($threads);
+warn "Using $number_of_threads threads for searches\n" unless ($quiet);
+
+
+unless (@libraries) {
+    die "No reference genomes were configured, please adjust configuration.\n";
+}
+
+if(defined $nohits){
+	if( (defined $tag) or (defined $filter) ){
+		die "Option --nohits may not be specified with --filter/--tag.\n";
+	}
+	
+	$tag = 1;
+	$filter = 0 x scalar(@libraries);
+	warn "Option --nohits specified, setting --tag and --filter $filter\n" unless ($quiet);
+}
+
+if(defined $top){
+	($top, $skip) = split(/,/, $top);
+	$skip = 0 unless($skip);   #Prevent initialisation errors
+	
+	unless( ($top =~ /^\d+$/) and ($skip =~ /^\d+$/) ){
+		die "Option --top may only be passed <int> or <int>,<int>.\n";
+	}
+
+    die "Option --top may not be set to 0" if($top == 0);
+    die "Specify either --subset or --top, but not both.\n" if(defined $subset_count);
+
+    $subset_count = $top;   #For reporting numbers to standard out
+}
+
+if ( defined $tag ) {
+    unless ( defined $subset_count ) {
+        $subset_count = 0;    #Process all reads
+    }
+}
+
+$subset_count = 100_000 unless ( defined $subset_count );   #Subset needs to be after nohits and tag so that it will be set to 0
+if(defined $top){
+	if($skip){
+   		warn "Skipping first $skip reads then extracting top $top reads from the sequence file(s)\n" unless ($quiet);
+   	} else {
+    	warn "Extracting top $top reads from the sequence file(s)\n" unless ($quiet);
+    }
+} elsif ($subset_count) {
+    warn "Option --subset set to $subset_count reads\n" unless ($quiet);
+} else {
+    warn "Option --subset set to 0: processing all reads in FASTQ files\n" unless ($quiet);
+}
+
+if ( ( ( 1 << 32 ) != 4294967296 ) and ( scalar @libraries > 15 ) ) {    #32-bit
+    die "Maximum number of reference genomes exceeded for 32-bit Perl, please adjust configuration and specify at most 15 libraries.\n";
+} elsif ( scalar @libraries > 32 ) {                                     #64-bit
+    die "Maximum number of reference genomes exceeded, please adjust configuration and specify at most 32 libraries.\n";
+}
+
+my @files = get_paths(@ARGV);
+
+die "No files to process\n" unless (@files);
+
+#If the --no_hits option is selected, decide whether the output should be
+#be compressed by assessing whether any of the input is compressed
+foreach my $file (@files) {
+    if ( $file =~ /\.gz$/ ) {
+        $zip_data_output = 1;
+        last;
+    }
+}
+
+my $index = 0;
+while ( $index <= $#files ) {
+    process_file( $files[$index] );
+    $index++;
+}
+
+sub process_file {
+
+    my ($file) = @_;
+	my $initial_filename = $file;   #Used later in program 
+    my @index_genomes;    # Stores the hits to each genome
+    my @bisulfite_orientation;    #Stores strand in bisulfite mode
+                                  #@Genome->@(count of OT, CTOT, CTOB, OB)
+    for(my $i = 0; $i < scalar(@libraries); $i++){    #Intialise array
+    	$bisulfite_orientation[$i] = [0, 0, 0, 0];
+    }                              
+
+    warn "Processing " . basename($file) . "\n" unless ($quiet);
+
+    # Check that we can actually find the files we're working with
+    unless ( -e $file ) {
+        warn "Couldn't locate file $file - skipping\n";
+        return;
+    }
+
+    # Check the output file names we're going to generate don't already exist
+    if ( !$force and check_outfilename($file) ) {    #check_outfilename returns 1 if there is a problem
+        warn "\tSkipping " . basename($file) . "\n";
+        return;
+    }
+
+    # We can try to remove the end specific part of the name
+    # if they're using standard Illumina naming. It doesn't
+    # really matter if this fails
+    my $outfile = basename($file);
+    $outfile = $outdir . $outfile;
+    $outfile =~ s/\.gz$//;
+    $outfile =~ s/\.(txt|seq|fastq|fq)$//i;
+    $outfile .= "_screen.txt";
+
+    open( RESULTS_OUT, '>', $outfile ) or do {
+        warn "Couldn't write to $outfile: $!";
+        return;
+    };
+
+    #Print out the Version and other information to the output file
+    print RESULTS_OUT "#Fastq_screen version: $VERSION\t";
+    if($bisulfite){
+        print RESULTS_OUT "#Aligner: Bismark/$aligner\t";
+    }else{
+        print RESULTS_OUT "#Aligner: $aligner\t";
+    }
+
+    if ($subset_count) {
+		if(defined $top){ 
+			print RESULTS_OUT "#Processed $top reads from top of file after skipping $skip reads\n";
+		} else {
+			print RESULTS_OUT "#Reads in subset: $subset_count\n";
+		}
+    } else {
+        print RESULTS_OUT "#Processing all reads in FASTQ files\n";
+    }
+
+    #Print the headers to the output file
+    print RESULTS_OUT join( "\t", ( 'Genome', '#Reads_processed', '#Unmapped', '%Unmapped', '#One_hit_one_genome', '%One_hit_one_genome', '#Multiple_hits_one_genome', '%Multiple_hits_one_genome', '#One_hit_multiple_genomes', '%One_hit_multiple_genomes', 'Multiple_hits_multiple_genomes', '%Multiple_hits_multiple_genomes' ) ), "\n";
+
+    my $temp_file;
+    my $read_length = get_read_length($file);
+
+    if ( $read_length < 0 ) {
+        warn 'Failed to calculate read length from ' . basename($file) . "\n";
+        return;
+    }
+
+    if ( $read_length < 20 ) {
+        warn "Ignoring reads shorter than 20bp\n";
+        $read_length = 20;
+    }
+
+    # We don't use a seed of >40 even if the reads are that long
+    $read_length = 40 if ( $read_length > 40 );
+
+    # Count the sequences in the file.
+    # We need to make a subset of these sequences
+    # First we need to count how many sequences are in the original file
+    my $seqcount = 0;
+    unless($top){
+        if ($subset_count) {
+            warn "Counting sequences in " . basename($file) . "\n" unless ($quiet);
+        }
+
+        #Check if the read file is compressed and open accordingly
+        if ( $file =~ /\.gz$/ ) {
+            open( IN_COUNT, "gunzip -c \'$file\' |" ) or do {
+                warn "Can't read $file: $!";
+                return;
+            };
+        } else {
+            open( IN_COUNT, $file ) or do {
+                warn "Can't read $file: $!";
+                return;
+            };
+        }
+
+        ++$seqcount while (<IN_COUNT>);
+        $seqcount = int( $seqcount / 4 );
+        close IN_COUNT or die "Cannot close filehandle on '$file' : $!";
+    }
+
+    my $interval;
+    my $readsprocessed;
+    $temp_file = basename($file);
+    $temp_file = $outdir . $temp_file . "_temp_subset.fastq";
+
+
+    if($top){
+        $interval = 1;
+        $readsprocessed = subset( $file, $temp_file, $interval );
+
+    } elsif ( $subset_count and $seqcount > $subset_count * 2 ) {    # We actually need to do the reduction
+        $interval = sprintf( "%.0f", ( $seqcount / $subset_count ) );
+        warn "Making reduced sequence file with ratio $interval:1\n" unless ($quiet);
+        $readsprocessed = subset( $file, $temp_file, $interval );
+
+    } else {                                                    #Make new indexed file with no reduction
+        $interval = 1;
+        if ($subset_count) {
+            warn "Not making subset of $subset_count since $seqcount actual sequences is too low or close enough\n" unless ($quiet);
+            $readsprocessed = subset( $file, $temp_file, $interval );    #Interval is 1, so TEMP file has same number of reads as original
+        } else {
+            warn "Not making data subset\n" unless ($quiet);
+            $readsprocessed = subset( $file, $temp_file, $interval );    #Still need to make temp file, since headers adjusted in temp file
+        }
+    }
+
+    if($readsprocessed == 0){
+ 	  	if(defined $top){
+    		warn "No reads in " . basename($file) . " (perhaps adjusting --top setting would correct this), skipping\n";
+    	} else {
+    		warn "No reads in " . basename($file) . ", skipping\n";
+    	}
+    	return;
+    }
+
+    $file = $temp_file;
+
+    my $library_index = -1;                                              # Make lists in the same order as @libraries
+
+    foreach my $library (@libraries) {
+
+        #Write Bowtie/Bowtie2 Standard Error to a temporary output file
+        #Generate a random filename and place in $outdir (if specified)
+        my $error_fh;
+        my $error_filename;
+        if ($outdir) {
+            ( $error_fh, $error_filename ) = tempfile( 'aligner_standard_error.XXXXXXXX', SUFFIX => '.txt', DIR => $outdir );
+        } else {
+            ( $error_fh, $error_filename ) = tempfile( 'aligner_standard_error.XXXXXXXX', SUFFIX => '.txt' );
+        }
+
+        warn "Searching " . basename($file) . " against $library->[0]\n" unless ($quiet);
+
+        my $illumina_flag = '';
+        if($illumina){
+        	$illumina_flag = '--phred64-quals';
+        }
+
+        #Count the index of the library being used
+        $library_index++;
+
+        if ($bisulfite) {
+        	die "The aligner BWA may not be used in --bisulfite mode, please adjust configuration.\n" if($aligner eq 'bwa');
+            bisulfite_mapping( $illumina_flag, $library, $file, $error_filename, $library_index, $error_fh, \@index_genomes, \@bisulfite_orientation );
+        } else {
+            conventional_mapping( $illumina_flag, $read_length, $library, $file, $error_filename, \@index_genomes, $library_index, $error_fh );
+        }
+    }
+
+    # Collate the hit results from the Bowtie searches.
+    # Result categories are:
+    # 0 - read not map to library
+    # 1 - read maps uniquely to this library but maps to no others
+    # 2 - read multi-maps to this library but maps to no others
+    # 3 - read maps uniquely to this library and maps to at least one other library
+    # 4 - read multi-maps to this library and maps to at least one other library
+    my @one_hit_one_library;
+    my @one_hit_multiple_libraries;
+    my @multiple_hits_one_library;
+    my @multiple_hits_multiple_libraries;
+
+    # Initialise those arrays with zero values, making them the same length as @libraries
+    for my $position ( 0 .. $#libraries ) {    #$position is 0-based
+        $one_hit_one_library[$position]              = 0;
+        $one_hit_multiple_libraries[$position]       = 0;
+        $multiple_hits_one_library[$position]        = 0;
+        $multiple_hits_multiple_libraries[$position] = 0;
+    }
+
+    for my $val (@index_genomes) {
+        if ( !defined $val ) {                 #May not be defined, but later elements in array may be defined
+            $val = 0;
+            next;
+        }
+        for my $position ( 0 .. $#libraries ) {
+            my $mapping_result = maps_which_library( $val, $position + 1 );    #maps_which_library uses 1-based numbering for libraries
+            if ( $mapping_result == 0 ) {
+                next;                                                          #Did not map to this genome
+            } elsif ( $mapping_result == 1 ) {
+                $one_hit_one_library[$position]++;
+            } elsif ( $mapping_result == 2 ) {
+                $multiple_hits_one_library[$position]++;
+            } elsif ( $mapping_result == 3 ) {
+                $one_hit_multiple_libraries[$position]++;
+            } elsif ( $mapping_result == 4 ) {
+                $multiple_hits_multiple_libraries[$position]++;
+            }
+        }
+    }
+
+    # Summarise the counts and write the text report
+    foreach my $index ( 0 .. $#libraries ) {
+        my $library = $libraries[$index];
+
+        my $percent_one_hit_one_library =  calc_perc($one_hit_one_library[$index], $readsprocessed);
+        my $percent_one_hit_multiple_libraries = calc_perc($one_hit_multiple_libraries[$index], $readsprocessed);
+        my $percent_multiple_hits_one_library = calc_perc($multiple_hits_one_library[$index], $readsprocessed);
+        my $percent_multiple_hits_multiple_libraries = calc_perc($multiple_hits_multiple_libraries[$index], $readsprocessed);
+        my $percent_unmapped;
+        if($percent_one_hit_one_library eq 'NA'){    #No reads processed
+        	$percent_unmapped = 'NA';
+       	} else {
+       		$percent_unmapped = 100 - $percent_one_hit_one_library - $percent_one_hit_multiple_libraries - $percent_multiple_hits_one_library - $percent_multiple_hits_multiple_libraries;
+       		$percent_unmapped = sprintf( "%.2f", $percent_unmapped );
+       	}
+
+
+       my $reads_unmapped = $readsprocessed - $one_hit_one_library[$index] - $one_hit_multiple_libraries[$index] - $multiple_hits_one_library[$index] - $multiple_hits_multiple_libraries[$index];
+       print RESULTS_OUT join( "\t", ( $library->[0], $readsprocessed, $reads_unmapped, $percent_unmapped, $one_hit_one_library[$index], $percent_one_hit_one_library, $multiple_hits_one_library[$index], $percent_multiple_hits_one_library, $one_hit_multiple_libraries[$index], $percent_one_hit_multiple_libraries, $multiple_hits_multiple_libraries[$index], $percent_multiple_hits_multiple_libraries ) ), "\n";
+    }
+
+    #Calculate the number of reads that mapped to none of the libraries
+    my $hit_no_genomes = $readsprocessed;    #Number of reads in temp file
+    foreach my $val (@index_genomes) {
+        $hit_no_genomes-- if ($val);         #This read mapped to at least one genome
+    }
+
+    my $percent_hit_no_libraries = calc_perc($hit_no_genomes, $readsprocessed);
+    print RESULTS_OUT "\n\%Hit_no_genomes: $percent_hit_no_libraries\n";
+   
+    if($bisulfite and ($hit_no_genomes != $readsprocessed) ){    #Add additional bisulfite orientation results, providing at least one reads mapped to any genome
+    	print RESULTS_OUT "\n\n";
+    	print RESULTS_OUT "#Bisulfite read orientation results\n";
+    	print RESULTS_OUT "Library\t";
+    	print RESULTS_OUT "#Original_top_strand\t%Original_top_strand\t";
+    	print RESULTS_OUT "#Complementary_to_original_top_strand\t%Complementary_to_original_top_strand\t";
+    	print RESULTS_OUT "#Complementary_to_original_bottom_strand\t%Complementary_to_original_bottom_strand\t";
+    	print RESULTS_OUT "#Original_bottom_strand\t%Original_bottom_strand\n";
+
+    	foreach my $index ( 0 .. $#libraries ) {
+        	my $library = $libraries[$index];
+        	my $ot = $bisulfite_orientation[$index]->[0];
+        	my $ctot = $bisulfite_orientation[$index]->[1];
+        	my $ctob = $bisulfite_orientation[$index]->[2];
+        	my $ob = $bisulfite_orientation[$index]->[3];
+        	my $total = $ot + $ctot + $ctob + $ob;
+			
+			next unless($total);    #No reads mapped to bisulfite genome
+
+        	my $pc_ot = sprintf( "%.2f", ($ot / $total * 100) );
+        	my $pc_ctot = sprintf( "%.2f", ($ctot / $total * 100) );
+        	my $pc_ctob = sprintf( "%.2f", ($ctob / $total * 100) );
+        	my $pc_ob = sprintf( "%.2f", ($ob / $total * 100) );
+        	print RESULTS_OUT "$library->[0]\t$ot\t$pc_ot\t$ctot\t$pc_ctot\t$ctob\t$pc_ctob\t$ob\t$pc_ob\n";
+    	}
+    }
+
+   	#close IN or die "Cannot close filehandle : $!";
+    close RESULTS_OUT or die "Cannot close filehandle on '$outfile' : $!";
+
+    if(defined $tag){
+    	tag_reads(\@index_genomes, $file, $outfile);
+    }
+	
+	if(defined $filter){
+		my $tagged_filename = $outfile;
+		$tagged_filename =~ s/_screen.txt$//;
+		$tagged_filename .= '.tagged.fastq';
+		$tagged_filename .= '.gz' if ($zip_data_output);
+		warn "Filtering " . basename($tagged_filename) . "\n" unless($quiet);
+		process_tag_files($tagged_filename);
+	}
+
+    unlink($temp_file) or warn "Unable to delete temp file '$temp_file'" if ($temp_file);
+
+    #Check whether the module GD::Graph is installed
+    eval {
+        require GD::Graph::bars;
+        GD::Graph::pie->import();
+    };
+
+    unless ($@) {
+        make_graph($outfile);
+        if($bisulfite){
+        	make_bisulfite_graph($outfile);
+    	}
+    } else {
+        warn "Perl module GD::Graph::bars not installed, skipping charts\n";
+    }
+
+    #Make HTML report (this could be performed above, but code neater if kept as a separate subroutine)
+    make_html($initial_filename); 
+}
+
+
+#Tag files are processed and a filter file is produces
+#Takes an array of the files to process
+sub process_tag_files{
+	my @files = get_paths(@_);
+	my $filter_string = $filter;
+
+	warn "Filtering files with filter '$filter'\n" unless ($quiet);
+
+	foreach my $file (@files){
+		warn "Filtering " . basename($file) . "\n" unless ($quiet);
+		
+		my $outfile = basename($file);
+		$outfile = $outdir . $outfile;
+		$outfile =~ s/\.gz$//;
+		$outfile =~ s/\.(txt|seq|fastq|fq)$//i;
+		$outfile .= "_filter.fastq";
+		$outfile .= '.gz' if ($zip_data_output);
+		
+		if(-e $outfile and !$force){    #When only filtering file (i.e. not mapping/tagging) this check will not have been performed already
+			warn "Output file '" . basename($outfile) . "' already exists\n";
+			warn "Skipping " . basename($outfile) . "\n";
+			next;
+		}
+			
+		if($file =~ /\.gz$/){
+			open (IN_PROCESS_TAG, "gunzip -c $file |") or die "Could not read file '$file' : $!";
+			$zip_data_output = 1;    #Output will be zipped
+		 } else{
+		 	open (IN_PROCESS_TAG, '<', $file) or die "Could not read file '$file' : $!";
+		 }
+		
+		if ($zip_data_output) {    #Declared outside of subroutine
+			open( OUT_PROCESS_TAG, "| gzip -c - > $outfile" ) or die "Couldn't write to file '$outfile' : $!";
+		} else {
+			open( OUT_PROCESS_TAG, ">$outfile" ) or die "Could not write to '$outfile' : $!";
+		}
+		
+		my $filter_description = '';    #Print out the filter description to the first line of the filtered file (may not be first line of tagged file)
+		my $printed_description_flag = 0;
+		my $first_read = 1;
+		while(<IN_PROCESS_TAG>){
+			my $header = $_;
+			my $rest_of_read = scalar <IN_PROCESS_TAG>;
+			$rest_of_read .= scalar <IN_PROCESS_TAG>;
+			$rest_of_read .= scalar <IN_PROCESS_TAG>;
+
+			my $pass_filter_flag = pass_filter_data($header);
+			$pass_filter_flag = abs($pass_filter_flag - $inverse);    #Invert the filter: 0->1, 1->0
+				
+			if($first_read){
+				if($pass_filter_flag){        #Print read as is
+					print OUT_PROCESS_TAG $header . $rest_of_read;    
+					$printed_description_flag = 1;
+				} else {
+					$header =~ /#?.+(#.+?):\d+$/;
+					$filter_description = $1;
+				}
+			} else {
+				if($pass_filter_flag){
+					if($printed_description_flag){
+						print OUT_PROCESS_TAG $header . $rest_of_read;    #Print as is
+					} else {    #Edit to incorporate tag description
+						my $modified_header = $header;
+						$modified_header =~ s/#FQST/$filter_description/;
+						print OUT_PROCESS_TAG $modified_header . $rest_of_read;
+						$printed_description_flag = 1;
+					}
+				}
+			}
+			$first_read = 0;
+		}
+
+		close IN_PROCESS_TAG or die "Could not close filehandle on " . basename($file) . " : $!";
+		close OUT_PROCESS_TAG or die "Could not close filehandle on " . basename($outfile) . ": $!";
+	}
+}
+
+warn "Processing complete\n" unless ($quiet);
+
+exit (0);
+
+#####################################################################################################
+#Subroutines
+#####################################################################################################
+
+#Takes an input filename and uses global parameter variables to check
+#whether potential outfiles already exist.
+#Returns 1 if at least one potential outfile already exists, else returns 0
+sub check_outfilename {
+    my $file = $_[0];
+
+    my $outfile = basename($file);
+    $outfile = $outdir . $outfile;
+
+    my $parameters_problem = 0;    #Set to 0 if outpufile already exists and force option not selected
+    if ( -e $outfile . "_temp_subset.fastq") {
+        warn "Temporary subset file '" . basename($outfile) . "_temp_subset.fastq' already exists\n";
+        $parameters_problem = 1;
+    }
+
+    $outfile =~ s/\.gz$//;
+    $outfile =~ s/\.(txt|seq|fastq|fq)$//i;
+	$outfile .= "_screen.png";
+    if ( -e $outfile ) {
+        warn "\tOutput graphics file '" . basename($outfile) . "' already exists\n";
+        $parameters_problem = 1;
+    }
+	
+	$outfile =~ s/_screen\.png$/_screen\.html/;
+    if ( -e $outfile ) {
+        warn "\tOutput HTML file '" . basename($outfile) . "' already exists\n";
+        $parameters_problem = 1;
+    }
+		
+	$outfile =~ s/_screen\.html$/_screen\.txt/;
+    if ( -e $outfile ) {
+        warn "\tOutput file '" . basename($outfile) . "' already exists\n";
+        $parameters_problem = 1;
+    }
+	
+	if($tag){
+		$outfile =~ s/_screen\.txt$/\.tagged\.fastq/;
+		$outfile .= '.gz' if($zip_data_output);
+		if ( -e $outfile ) {
+			warn "\tOutput file '" . basename($outfile) . "' already exists\n";
+			$parameters_problem = 1;
+		}
+		
+		if(defined $filter){
+			$outfile =~ s/\.gz$//;
+			$outfile =~ s/\.(txt|seq|fastq|fq)$//i;
+			$outfile .= "_filter.fastq";
+			$outfile .= '.gz' if ($zip_data_output);
+			
+			if ( -e $outfile ) {
+				warn "\tOutput file '" . basename($outfile) . "' already exists\n";
+				$parameters_problem = 1;
+			}
+		}
+	}
+	
+    if ($bisulfite) {    #Identify temp files made
+ 
+	  	my $bisulfite_graphfile = basename($file);
+	    $bisulfite_graphfile =~ s/\.gz$//;
+	    $bisulfite_graphfile =~ s/\.(txt|seq|fastq|fq)$//i;
+	    $bisulfite_graphfile = $outdir . '/' . $bisulfite_graphfile;
+		$bisulfite_graphfile .= "_screen.bisulfite_orientation.png";
+	    if ( -e $bisulfite_graphfile) {
+	        warn "\tOutput bisulfite graphics file '" . basename($bisulfite_graphfile) . "' already exists\n";
+	        $parameters_problem = 1;
+	    }
+
+        my $original_file = basename($file);
+        my $subset_file   = basename($file) . '_temp_subset.fastq';
+        foreach my $myFile ( $original_file, $subset_file ) {
+            $myFile =~ s/(\.fastq\.gz|\.fq\.gz|\.fastq|\.fq)$//;    #attempting to remove fastq.gz etc to make filename a little shorter
+            foreach my $library (@libraries) {
+                my $genome_name       = $library->[0];
+                my $bismark_temp_file = "$genome_name.$myFile";
+
+                if ( $aligner eq 'bowtie' ) {
+                    $bismark_temp_file .= '_bismark';
+                } else {
+                    $bismark_temp_file .= '_bismark_bt2';
+                }
+
+                if ( defined $path_to_samtools ) {
+                    $bismark_temp_file .= '.bam';
+                } else {
+                    $bismark_temp_file .= '.sam';
+                }
+
+                $bismark_temp_file = $outdir . $bismark_temp_file;
+                my $bismark_temp_report_file = $bismark_temp_file;
+                $bismark_temp_report_file =~ s/\.sam$|\.bam$/_SE_report.txt/;
+
+                if ( -e $bismark_temp_file ) {
+                    warn "\tBismark potential temporary output file '" . basename($bismark_temp_file) . "' already exists\n";
+                    $parameters_problem = 1;
+                }
+
+                if ( -e $bismark_temp_report_file ) {
+                    warn "\tBismark potential temporary report file '" . basename($bismark_temp_report_file) . "' already exists\n";
+                    $parameters_problem = 1;
+                }
+            }
+        }
+    }
+
+    if ($parameters_problem) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+
+#Takes a FASTQ filename and generates an HTML summary report by reading the 
+#relevant summary file already produced by FastQ Screen
+sub make_html{
+
+    my $file = $_[0];
+	
+	my $summary_file = basename($file);
+    $summary_file = $outdir . $summary_file;
+    $summary_file =~ s/\.gz$//;
+    $summary_file =~ s/\.(txt|seq|fastq|fq)$//i;
+    $summary_file .= "_screen.txt";
+	
+    #Read in summary file
+    open (SUMMARY, '<', $summary_file) or die "Could not open '$summary_file' for creating HTML summary report: $!";
+    my ($version, $aligner, $subset) = split(/\t/, scalar <SUMMARY>);
+    $version =~ s/^#Fastq_screen version: //;
+    $aligner =~ s/^#Aligner: //;
+    $subset =~ s/^#Reads in subset: //;
+
+    scalar <SUMMARY>;    #Ignore column headers
+
+    my @data;
+	my @bisulfite_data;    #The following variables will only be used in bisulfite mode
+	while(<SUMMARY>){
+        my $line = $_;
+        chomp $line;
+		next if($line =~ /^\s*$/);
+		
+		if( ($line eq '#Bisulfite read orientation results') or (scalar (@bisulfite_data)) ){    #In bisulfite region
+			push(@bisulfite_data, $line);
+		}else{
+			push(@data, $line);
+		}
+    }
+    close SUMMARY or die "Could not close filehandle on '$summary_file' when creating HTML summary report: $!";
+
+	my $bisulfite_table_string;
+	my $bisulfite_species_string = '';
+    my $pc_ot = '';
+    my $pc_ctot = '';
+    my $pc_ctob = '';
+    my $pc_ob = '';
+    if(scalar @bisulfite_data){    #Contains bisulfite data
+    	@bisulfite_data = splice(@bisulfite_data, 2);    #Remove header rows
+    	my $table_string = '';
+
+	    foreach my $element (@bisulfite_data){
+	        my @sub_elements = split(/\t/, $element);
+	        $bisulfite_table_string .= "\t\t\t<tr>\n";
+	        $bisulfite_table_string .= "\t\t\t\t<td>" . commify($sub_elements[0]) . "</td>\n";
+	        $bisulfite_table_string .= "\t\t\t\t<td>" . commify($sub_elements[1]) . "</td>\n";
+	        $bisulfite_table_string .= "\t\t\t\t<td>" . commify($sub_elements[3]) . "</td>\n";
+	        $bisulfite_table_string .= "\t\t\t\t<td>" . commify($sub_elements[5]) . "</td>\n";
+	        $bisulfite_table_string .= "\t\t\t\t<td>" . commify($sub_elements[7]) . "</td>\n";
+	        $bisulfite_table_string .= "\t\t\t</tr>\n";
+
+	        $bisulfite_species_string .= "'" . $sub_elements[0] . "', ";
+	        $pc_ot .= $sub_elements[2] . ", ";
+	        $pc_ctot .= $sub_elements[4] . ", ";
+	        $pc_ctob .= $sub_elements[6] . ", ";
+	        $pc_ob .= $sub_elements[8] . ", ";
+	    }
+
+		$bisulfite_table_string =~ s/^\t\t\t//;    #Remove tabs already in file
+	    $bisulfite_species_string =~ s/, $//;    #Remove trailing characters
+	    $pc_ot =~ s/, $//;
+	    $pc_ctot =~ s/, $//;
+	    $pc_ctob =~ s/, $//;
+	    $pc_ob =~ s/, $//;
+    }
+	
+	#Make HTML table
+    my $pc_hit_no_genomes = pop(@data);
+    $pc_hit_no_genomes =~ s/^%Hit_no_genomes: //;
+
+    my $datestamp = datestampGenerator();
+    my $table_string = '';
+    my @species;
+    my @pc_one_hit_one_genome;
+    my @pc_multiple_hits_one_genome;
+    my @pc_one_hit_multiple_genomes;
+    my @pc_multiple_hits_multiple_genomes;
+	my $graph_height = 100 * ((scalar @data) + 1);
+	$graph_height = 500 if($graph_height < 500);
+
+    foreach my $element (@data){
+        my @sub_elements = split(/\t/, $element);
+        $table_string .= "\t\t\t<tr>\n";
+        $table_string .= "\t\t\t\t<td><b>" . commify($sub_elements[0]) . "</b></td>\n";
+        $table_string .= "\t\t\t\t<td>" . commify($sub_elements[1]) . "</td>\n";
+        $table_string .= "\t\t\t\t<td>" . commify($sub_elements[2]) . "</td>\n";
+        $table_string .= "\t\t\t\t<td>" . commify($sub_elements[4]) . "</td>\n";
+        $table_string .= "\t\t\t\t<td>" . commify($sub_elements[6]) . "</td>\n";
+        $table_string .= "\t\t\t\t<td>"	. commify($sub_elements[8]) . "</td>\n";
+        $table_string .= "\t\t\t\t<td>" . commify($sub_elements[10]) . "</td>\n";
+        $table_string .= "\t\t\t</tr>\n";
+
+        push(@species, $sub_elements[0]);
+        push(@pc_one_hit_one_genome, $sub_elements[5]);
+        push(@pc_multiple_hits_one_genome, $sub_elements[7]);
+        push(@pc_one_hit_multiple_genomes, $sub_elements[9]);
+        push(@pc_multiple_hits_multiple_genomes, $sub_elements[11]);
+    }
+	
+	my $pc_one_hit_one_genome_string = join(', ', @pc_one_hit_one_genome) . ', 0';
+	my $pc_multiple_hits_one_genome_string = join(', ', @pc_multiple_hits_one_genome) . ', 0';
+	my $pc_one_hit_multiple_genomes_string = join(', ', @pc_one_hit_multiple_genomes) . ', 0';
+	my $pc_multiple_hits_multiple_genomes_string = join(', ', @pc_multiple_hits_multiple_genomes) . ', 0';
+	
+	#Hover required for nice editing of graphs
+	my $hoverinfo_samples = '';   
+	my $hoverinfo_nohits = '';
+	
+	my $hover_pc_one_hit_one_genome_string = create_hover_string(@pc_one_hit_one_genome);
+	my $hover_pc_multiple_hits_one_genome_string = create_hover_string(@pc_multiple_hits_one_genome);
+	my $hover_pc_one_hit_multiple_genomes_string = create_hover_string(@pc_one_hit_multiple_genomes);
+	my $hover_pc_multiple_hits_multiple_genomes_string = create_hover_string(@pc_multiple_hits_multiple_genomes);
+
+	my $species_string = '';
+	my $nohits_string = $pc_hit_no_genomes;
+	my $hover_nohits_string = "'" . $nohits_string ."'";
+	my $hover_info_bisulfite_samples = '';
+	
+	foreach my $species (@species){
+		$species_string .= "'" . $species . "', ";
+		$hoverinfo_samples .= "'text', ";
+		$hover_info_bisulfite_samples .= "'text', ";	
+		$hoverinfo_nohits .= "'skip', ";
+		$nohits_string = "0, " . $nohits_string;
+		$hover_nohits_string = 	"'0', " . $hover_nohits_string;
+	}
+		
+	$species_string .= "'Hit_No_Genomes'";
+	$hoverinfo_samples .= "'skip'";
+	$hoverinfo_nohits .= "'text'";
+	$hover_info_bisulfite_samples = substr( $hover_info_bisulfite_samples, 0, (length($hover_info_bisulfite_samples) - 2) );  #Remove trailing comma and space
+	
+    #Read in template file
+    my $html_string = '';
+    open (TEMPLATE, '<', "$RealBin/fastq_screen_summary_template.html") or die "Could not open HTML summary template : $!";
+    while(<TEMPLATE>){
+        $html_string .= $_;
+    }
+    close TEMPLATE or die "Could not close filehandle on HTML summary template: $!";
+
+    #Edit template
+	my $filename_to_display = basename($file);
+	if(scalar @bisulfite_data){
+		my $bisulfite_graph_height = 100 * (scalar @bisulfite_data);
+		$bisulfite_graph_height = 500 if($bisulfite_graph_height < 500);
+		$html_string =~ s/INPUT_BISULFITE_GRAPH_DIV_HEIGHT/$bisulfite_graph_height/g;	
+		$html_string =~ s/INPUT_HOVERINFO_BISULFITE_SAMPLES/$hover_info_bisulfite_samples/g;
+		$html_string =~ s/INPUT_BISULFITE_TO_REMOVE_START//g;
+		$html_string =~ s/INPUT_BISULFITE_TO_REMOVE_END//g;
+        $html_string =~ s/INPUT_BISULFITE_TABLE_DATA/$bisulfite_table_string/g;
+		$html_string =~ s/INPUT_BISULFITE_SPECIES/$bisulfite_species_string/g;
+        $html_string =~ s/INPUT_PERC_OT/$pc_ot/g;
+        $html_string =~ s/INPUT_PERC_CTOT/$pc_ctot/g;
+        $html_string =~ s/INPUT_PERC_CTOB/$pc_ctob/g;
+        $html_string =~ s/INPUT_PERC_OB/$pc_ob/g;
+		
+		
+		my $bis_hover_pc_ot = bis_hover_convert($pc_ot);
+		my $bis_hover_pc_ctot = bis_hover_convert($pc_ctot);
+		my $bis_hover_pc_ctob = bis_hover_convert($pc_ctob);
+		my $bis_hover_pc_ob = bis_hover_convert($pc_ob);
+		
+		$html_string =~ s/INPUT_HOVERTEXT_BISULFITE_PERC_OT/$bis_hover_pc_ot/g;
+		$html_string =~ s/INPUT_HOVERTEXT_BISULFITE_PERC_CTOT/$bis_hover_pc_ctot/g;
+		$html_string =~ s/INPUT_HOVERTEXT_BISULFITE_PERC_CTOB/$bis_hover_pc_ctob/g;
+		$html_string =~ s/INPUT_HOVERTEXT_BISULFITE_PERC_OB/$bis_hover_pc_ob/g;
+		
+
+	} else {    #Remove bisulfite graph and table
+		$html_string =~ s/INPUT_BISULFITE_TO_REMOVE_START.*?INPUT_BISULFITE_TO_REMOVE_END//gs;
+	}	
+
+    $html_string =~ s/INPUT_FILENAME/$filename_to_display/g;
+    $html_string =~ s/INPUT_SPECIES/$species_string/g;
+	$html_string =~ s/INPUT_PERC_ONE_HIT_ONE_GENOME/$pc_one_hit_one_genome_string/g;
+    $html_string =~ s/INPUT_PERC_MULTIPLE_HITS_ONE_GENOME/$pc_multiple_hits_one_genome_string/g;
+    $html_string =~ s/INPUT_PERC_ONE_HIT_MULTIPLE_GENOMES/$pc_one_hit_multiple_genomes_string/g;
+    $html_string =~ s/INPUT_PERC_MULTIPLE_HITS_MUTLIPLE_GENOMES/$pc_multiple_hits_multiple_genomes_string/g;
+	$html_string =~ s/INPUT_GRAPH_DIV_HEIGHT/$graph_height/g;
+	
+	$html_string =~ s/INPUT_HOVERINFO_SAMPLES/$hoverinfo_samples/g;
+	$html_string =~ s/INPUT_HOVERINFO_NOHITS/$hoverinfo_nohits/g;
+	$html_string =~ s/INPUT_NOHITS_STRING/$nohits_string/;
+ 	
+	$html_string =~ s/INPUT_PERC_HIT_NO_GENOMES/$pc_hit_no_genomes/g;
+    $html_string =~ s/INPUT_DATESTAMP/$datestamp/g;
+    $html_string =~ s/INPUT_TABLE_DATA/$table_string/g;
+    $html_string =~ s/INPUT_VERSION/$version/g;
+    $html_string =~ s/INPUT_MAPPING_PARAMETERS/$aligner/g;
+    $html_string =~ s/INPUT_SUBSET/$subset/g;
+	
+	$html_string =~ s/INPUT_HOVERTEXT_PERC_ONE_HIT_ONE_GENOME/$hover_pc_one_hit_one_genome_string/g;
+	$html_string =~ s/INPUT_HOVERTEXT_PERC_MULTIPLE_HITS_ONE_GENOME/$hover_pc_multiple_hits_one_genome_string/g;
+	$html_string =~ s/INPUT_HOVERTEXT_PERC_ONE_HIT_MULTIPLE_GENOMES/$hover_pc_one_hit_multiple_genomes_string/g;
+	$html_string =~ s/INPUT_HOVERTEXT_PERC_MULTIPLE_HITS_MUTLIPLE_GENOMES/$hover_pc_multiple_hits_multiple_genomes_string/g;
+	$html_string =~ s/INPUT_HOVERTEXT_NOHITS_STRING/$hover_nohits_string/g;
+	
+	#Get the JavaScript code and insert into the template
+	#An alternative would be to download the code each time the output files are open, but
+	#embedding the text in the template will result in the HTML summary files 
+	#rendering correctly when offline.
+	my $js_code_file = "$RealBin/interactive_graphs.js";
+	my $js_code = '';
+	open (JS_CODE, '<', $js_code_file) or die "Could not open '$js_code_file' : $!";
+    while(<JS_CODE>){
+        $js_code .= $_;
+    }
+    close JS_CODE or die "Could not close filehandle on '$js_code_file' : $!";
+	$html_string =~ s/INPUT_INTERACTIVE_GRAPHS_JAVASCRIPT_CODE/$js_code/g;
+	
+    #Write out results
+    my $outfile = $summary_file;
+    $outfile =~ s/\.txt$/.html/;
+    open(HTML_OUT, '>', $outfile) or die "Could not write to summary HTML file '$outfile' : $!";
+    print HTML_OUT $html_string;
+    close HTML_OUT or die "Cannot close filehandle on HTML file '$outfile' : $!";
+	
+	
+	#Takes an array of mapping result and returns a string suitable for the plotly hover array
+	sub create_hover_string{
+		my @new;
+		foreach (@_){ push(@new, "'" . $_ . "'"); };
+		return(join(', ', @new) . ", '0'");
+	}
+	
+	#Takes the string of bisulifte results and converts to a string compatible for the hover text
+	sub bis_hover_convert{
+		my $input = "'" . $_[0];
+		$input =~ s/, /, '/g;
+		$input =~ s/,/',/g;
+		$input .= "'";
+		return($input);
+	}
+}
+
+
+
+#Add commas to a number string
+sub commify {
+    my $text = reverse $_[0];
+    $text =~ s/(\d\d\d)(?=\d)(?!\d*\.)/$1,/g;
+    return scalar reverse $text;
+}
+
+#Returns a suitably formatted datestamp
+sub datestampGenerator {
+    my @now       = localtime();
+    my $datestamp = sprintf(
+        "%02d-%02d-%02d %02d-%02d-%04d",
+
+        $now[2], $now[1],     $now[0],
+        $now[3], $now[4] + 1, $now[5] + 1900
+    );
+    return $datestamp;
+}
+
+
+#Uses Bismark to map an input file to a specified genome
+#Results stored in the @index_genomes array
+sub bisulfite_mapping {
+
+    my ( $illumina_flag, $library, $file, $error_filename, $library_index, $error_fh, $index_genomes_ref, $bisulfite_orientation_ref ) = @_;
+    my $bismark_command;
+    my $sam_output_option = '';
+    $sam_output_option = '--sam' unless ( defined $path_to_samtools );
+
+    #Determine whether to execute bowtie1 or bowtie2
+    my $prefix = $library->[0];
+	my $path_to_aligner_command = '';   #Bismark needs the path to the Bismark folder, NOT the executable file
+    if ( $aligner eq 'bowtie' ) {
+		if($path_to_bowtie ne 'bowtie'){
+			$path_to_aligner_command = $path_to_bowtie;
+			my @elements = split(/\//, $path_to_aligner_command);
+			pop @elements;
+			$path_to_aligner_command = join('/', @elements) . '/';
+			$path_to_aligner_command = '--path_to_bowtie ' . $path_to_aligner_command;
+		}	
+        $bismark_command = "$path_to_bismark $sam_output_option $path_to_aligner_command --bowtie1 $bowtie_opts $illumina_flag --non_directional --prefix $prefix --output_dir $outdir $library->[1] $file 1>/dev/null 2>$error_filename";
+    } else {    #Using Bowtie2
+
+	if($path_to_bowtie ne 'bowtie2'){
+			$path_to_aligner_command = $path_to_bowtie2;
+			my @elements = split(/\//, $path_to_aligner_command);
+			pop @elements;
+			$path_to_aligner_command = join('/', @elements) . '/';
+			$path_to_aligner_command = '--path_to_bowtie ' . $path_to_aligner_command;   #Bismark uses --path_to_bowtie for Bowtie1 and Bowtie2
+		}	
+		$bismark_command = "$path_to_bismark $sam_output_option $path_to_aligner_command --bowtie2 $bowtie2_opts $illumina_flag --non_directional --prefix $prefix --output_dir $outdir $library->[1] $file 1>/dev/null 2>$error_filename";
+    }
+
+    !system($bismark_command) or die "Could not run Bismark with command: '$bismark_command'.\n";
+
+    #Process the output file to determine the reads mapping to the specified genome
+    my $mapped_file = basename($file);
+    $mapped_file =~ s/(\.fastq\.gz|\.fq\.gz|\.fastq|\.fq)$//;    # attempting to remove fastq.gz etc to make filename a little shorter
+    $mapped_file = "$prefix.$mapped_file";
+
+    if ( $aligner eq 'bowtie' ) {
+        $mapped_file .= '_bismark';
+    } else {
+        $mapped_file .= '_bismark_bt2';
+    }
+
+    if ( defined $path_to_samtools ) {
+        $mapped_file .= '.bam';
+    } else {
+        $mapped_file .= '.sam';
+    }
+
+    $mapped_file = $outdir . $mapped_file;
+
+    if ( defined $path_to_samtools ) {
+        open( MAPPED_FILE, "samtools view $mapped_file |" ) or die "Couldn't read $mapped_file : $!";
+    } else {
+        open( MAPPED_FILE, '<', $mapped_file ) or die "Couldn't read $mapped_file : $!";
+    }
+
+    while (<MAPPED_FILE>) {
+		my $line = $_;
+		chomp $line;
+		next if ( substr( $line, 0, 1 ) eq '@' );
+
+		my ($seqname) = split( /\./, $line );    #Extract the index id
+		unless ( defined ${$index_genomes_ref}[$seqname] ) {
+		    ${$index_genomes_ref}[$seqname] = 0;    #Initialise - array may have 'gaps'
+		}
+		${$index_genomes_ref}[$seqname] = record_hit( ${$index_genomes_ref}[$seqname], $library_index + 1 );
+
+		#Now determine the directionality of the read 
+		my $read_conversion;
+		my $genome_conversion;
+		while ($line =~ /(XR|XG):Z:([^\t]+)/g){
+			my $tag = $1;
+			my $value = $2;
+
+			if ($tag eq "XR") {
+				$read_conversion = $value;
+			} elsif ($tag eq "XG") {
+				$genome_conversion = $value;
+			} else {
+				die "Failed to determine read and genome conversion from line: $line.\n";
+			}
+		}
+
+    	if ($read_conversion eq 'CT' and $genome_conversion eq 'CT') { ## original top strand OT
+    		${ $bisulfite_orientation_ref }[$library_index]->[0]++;
+    	} elsif ($read_conversion eq 'GA' and $genome_conversion eq 'CT') { ## complementary to original top strand CTOT
+    		${ $bisulfite_orientation_ref }[$library_index]->[1]++;
+        } elsif ($read_conversion eq 'GA' and $genome_conversion eq 'GA') { ## complementary to original bottom strand CTOB
+        	${ $bisulfite_orientation_ref }[$library_index]->[2]++;
+        } elsif ($read_conversion eq 'CT' and $genome_conversion eq 'GA') { ## original bottom strand OB
+        	${ $bisulfite_orientation_ref }[$library_index]->[3]++;
+        } else {
+			die "Unexpected combination of read and genome conversion: '$read_conversion' / '$genome_conversion'\n";
+    	}
+ 	}
+
+    #Check the Standard Error and report any errors
+    #Bowtie reports the alignment summary to standard error, so ignore the alignment summary
+    while (<$error_fh>) {
+        unless ( /^\#/ or /^Reported/ or /^No alignments/ or /reads; of these/ or /were unpaired; of these/ or /aligned/ or /overall alignment rate/ or /mates make up the pairs; of these/ or /were paired; of these/ or /----/ ) {
+       		#warn "Bowtie/Bowtie2 warning: $_";
+        }
+    }
+    close $error_fh;
+    unlink $error_filename or die "Could not delete temporary Standard Error file '$error_filename' : $!";
+    close MAPPED_FILE      or die "Cannot close filehandle on '$mapped_file' : $!";
+    unlink $mapped_file    or die "Could not delete mapped bisulfite data file '$mapped_file'.\n";
+    my $bismark_report_file = $mapped_file;
+    $bismark_report_file =~ s/\.sam$|\.bam$/_SE_report.txt/;
+    unlink $bismark_report_file or die "Could not delete Bismark report file '$bismark_report_file'.\n";
+}
+
+#Uses Bowtie or Bowtie2 to map an input file to a specified genome
+#Results stored in the @index_genomes array
+sub conventional_mapping {
+
+    my ( $illumina_flag, $read_length, $library, $file, $error_filename, $index_genomes_ref, $library_index, $error_fh ) = @_;
+
+    my $aligner_command;
+
+    #Determine whether to execute bowtie1 or bowtie2
+    if ( $aligner eq 'bowtie' ) {
+        $aligner_command = "$path_to_bowtie $bowtie_opts --sam $illumina_flag -l $read_length -k 2 --chunkmbs 512 -p $number_of_threads $library->[1] \'$file\' 2>$error_filename |";
+    } elsif ($aligner eq 'bowtie2') {    #Using Bowtie2
+        $aligner_command = "$path_to_bowtie2 $bowtie2_opts $illumina_flag -k 2 --very-fast-local --no-hd --no-unal -p $number_of_threads -x $library->[1] -U \'$file\' 2>$error_filename |";
+    } else {    #BWA
+    	$aligner_command = "$path_to_bwa mem -a $bwa_opts $illumina_flag -t $number_of_threads $library->[1] \'$file\' 2>$error_filename |";
+    }
+
+    open( ALIGNER, $aligner_command ) or die "Failed to launch aligner command '$aligner_command': $!";
+
+    my $seqname_suffix = 1;    #Explained below
+    while (<ALIGNER>) {
+
+        my $line = $_;
+        chomp $line;
+
+        next if(substr($line,0,1) eq '@');    #Ignore headers
+
+        #Check the read is aligned
+        my ($seqname, $samFlag) = split( /\t/, $line );    #Extract the index id
+       	($seqname) = split(/\./, $seqname); 
+        next if $samFlag & 0x4;    #Did not align
+
+        unless ( defined ${$index_genomes_ref}[$seqname] ) {
+            ${$index_genomes_ref}[$seqname] = 0;    #Initialise - array may have 'gaps'
+        }
+        ${$index_genomes_ref}[$seqname] = record_hit( ${$index_genomes_ref}[$seqname], $library_index + 1 );
+    }
+
+    #Check the Standard Error output file and report any errors
+    #Ignore Bowtie/Bowtie2/BWA STDERR alignment summaries
+    while (<$error_fh>) {
+        unless ( /^\#/ or /^Reported/ or /^No alignments/ or /reads; of these/ 
+            or /were unpaired; of these/ or /aligned/ or /overall alignment rate/ 
+            or /mates make up the pairs; of these/ or /were paired; of these/ 
+            or /----/ or /^\[M::/ or /^\[main\]/) {
+            warn "Aligner warning: $_";
+        }
+    }
+    close $error_fh;
+    unlink $error_filename or die "Could not delete temporary Standard Error file '$error_filename' : $!";
+}
+
+sub remove_duplicates {
+    my @array = @_;
+    my %hash;
+
+    foreach my $element (@array) {
+        $hash{$element} = '';
+    }
+
+    @array = keys(%hash);
+    return @array;
+}
+
+sub get_paths {
+    my @files = @_;
+    my @files_with_paths;
+
+    @files = remove_duplicates(@files);
+    foreach my $file (@files) {
+        unless ( -e $file ) {
+            warn "Couldn't locate file $file - skipping\n";
+            next;
+        }
+
+        $file = File::Spec->rel2abs($file);    #Get path
+        push( @files_with_paths, $file );
+    }
+
+    @files_with_paths = remove_duplicates(@files_with_paths);
+    return @files_with_paths;
+}
+
+sub load_configuration {
+
+    # Find the config file
+
+    my ($conf_file) = @_;
+
+    # If they haven't specified a conf file then look
+    # in the directory containing the program.
+    $conf_file = "$RealBin/fastq_screen.conf" unless ($conf_file);
+
+    unless ( -e $conf_file ) {
+        die "Couldn't find fastq_screen.conf at '$conf_file'\n";
+    }
+
+    warn "Reading configuration from '$conf_file'\n" unless ($quiet);
+
+    open( CONF, $conf_file ) or die "Can't read $conf_file : $!";
+
+    #Determine aligner to use from 1) paths specified and 2) databases if no aligner specified
+    if ( !defined $aligner ) {
+        my $bowtie1_path_exists             = 0;
+        my $bowtie2_path_exists             = 0;
+        my $bwa_path_exists                 = 0;
+        my $bowtie1_database_exists         = 0;
+        my $bowtie2_database_exists         = 0;
+        my $bwa_database_exists             = 0;
+
+        while (<CONF>) {
+            chomp;
+            s/^\s+//;
+            s/\s+$//;
+
+            next if (/^\#/);
+            next unless ($_);
+
+            my ($name) = split(/\s+/);
+
+            if ( $name eq 'BOWTIE' ) {
+                if ( defined( ( split( /\s+/, $_, 2 ) )[1] ) ) {
+                    $bowtie1_path_exists = 1;
+                }
+            } elsif ( $name eq 'BOWTIE2' ) {
+                if ( defined( ( split( /\s+/, $_, 2 ) )[1] ) ) {
+                    $bowtie2_path_exists = 1;
+                }
+            } elsif ( $name eq 'BWA' ) {
+                if ( defined( ( split( /\s+/, $_, 2 ) )[1] ) ) {
+                    $bwa_path_exists = 1;
+                }
+            } elsif ( $name eq 'DATABASE' ) {
+                my ( undef, $database_name, $database_path ) = split( /\s+/, $_, 4 );
+				
+				next unless (defined $database_name) and (defined $database_path); 
+				
+                if ( -e "$database_path.1.ebwt" ) {
+                    $bowtie1_database_exists = 1;
+                }
+                if ( -e "$database_path.1.bt2" or -e "$database_path.1.bt2l" ) {
+                    $bowtie2_database_exists = 1;
+                }
+                if ( -e "$database_path.amb" ) {
+                    $bwa_database_exists = 1;
+                }
+            }
+        }
+
+        #Is bowtie, bowtie2 or Bismark in path?
+        $bowtie1_path_exists = 1 if ( `which bowtie 2>/dev/null` ne '' );
+        $bowtie2_path_exists = 1 if ( `which bowtie2 2>/dev/null` ne '' );
+
+        #Decide whether to proceed and display message if not
+        {    #Place code in block
+            my $parameters_ok = 1;
+            if ( $bowtie2_path_exists and $bowtie2_database_exists ) {
+                $aligner = 'bowtie2';
+                warn "Aligner (--aligner) not specified, but Bowtie2 path and index files found: mapping with Bowtie2\n" unless ($quiet);
+            } elsif ( $bowtie1_path_exists and $bowtie1_database_exists ) {
+                $aligner = 'bowtie';
+                warn "Aligner (--aligner) not specified, but Bowtie path and index files found: mapping with Bowtie\n" unless ($quiet);
+
+            } elsif ( $bwa_path_exists and $bwa_database_exists ) {
+                $aligner = 'bwa';
+                warn "Aligner (--aligner) not specified, but BWA path and index files found: mapping with BWA\n" unless ($quiet);
+            } else {
+                warn "Aligner (--aligner) not specified. Did not find Bowtie/Bowtie2/BWA paths and/or index files\n";
+                warn "Please check: you have provided the full path to the aligner INCLUDING the executable filename\n";
+                warn "Please check: the specified genome indices comprises the full path AND the basename of the index files\n";
+                warn "See documentation for further details\n";
+                $parameters_ok = 0;
+            }
+
+            die "Please adjust configuration.\n" unless ($parameters_ok);
+        }
+        seek( CONF, 0, 0 );    #Return to start of conf file
+    }
+
+    my %libraries_temp_list;    #%{library} = genome    Data structure used to create the @libraries array
+    my %problem_libraries;      #Records libraries which entered multiple times with different paths
+	my $database_skipped_flag = 0;    #Records whether any genomes have been skipped
+    while (<CONF>) {
+        chomp;
+        s/^\s+//;
+        s/\s+$//;
+
+        next if (/^\#/);
+        next unless ($_);
+
+        my ($name) = split(/\s+/);
+
+        if ( ( $name eq 'BOWTIE' ) and ( $aligner eq 'bowtie' ) ) {
+            $path_to_bowtie = ( split( /\s+/, $_, 2 ) )[1];
+            die "Empty value set for BOWTIE config parameter\n" unless ($path_to_bowtie);
+            warn "Using '$path_to_bowtie' as Bowtie path\n" unless ($quiet);
+        }
+
+        elsif ( ( $name eq 'BOWTIE2' ) and ( $aligner eq 'bowtie2' ) ) {
+            $path_to_bowtie2 = ( split( /\s+/, $_, 2 ) )[1];
+            die "Empty value set for BOWTIE2 config parameter\n" unless ($path_to_bowtie2);
+            warn "Using '$path_to_bowtie2' as Bowtie 2 path\n" unless ($quiet);
+        }
+
+        elsif ( ( $name eq 'BWA' ) and ( $aligner eq 'bwa' ) ) {
+            $path_to_bwa = ( split( /\s+/, $_, 2 ) )[1];
+            die "Empty value set for BWA config parameter\n" unless ($path_to_bwa);
+            warn "Using '$path_to_bwa' as BWA path\n" unless ($quiet);
+        }
+
+        elsif ( $name eq 'BISMARK' and $bisulfite ) {
+            $path_to_bismark = ( split( /\s+/, $_, 2 ) )[1];
+            die "Empty value set for BISULFITE config parameter\n" unless ($path_to_bismark);
+            warn "Using '$path_to_bismark' as Bismark path\n" unless ($quiet);
+        }
+
+        elsif ( $name eq 'THREADS' ) {
+            $number_of_threads = ( split(/\s+/) )[1];
+            unless ( $number_of_threads =~ /^\d+$/ ) {
+                die "Invalid number of threads '$number_of_threads set in conf file\n";
+            }
+        }
+
+        elsif ( $name eq 'DATABASE' ) {
+            my ( undef, $db_name, $db_path ) = split( /\s+/, $_ );
+			
+			next unless (defined $db_name) and (defined $db_path); 
+
+            if ( defined $bisulfite ) {
+                my $db_path_checked = check_bismark_genome_folder($db_path);
+                if ( !defined $db_path_checked ) {
+                    warn "Skipping DATABASE '$db_name' since no valid Bismark index was found at '$db_path'\n";
+					$database_skipped_flag = 1;
+                    next;
+                }
+                $db_path = $db_path_checked;
+
+            } else {    #Conventional library
+
+                # Check to see that there's a bowtie or bowtie2 index at that location
+                if ( $aligner eq 'bowtie' ) {
+                    unless ( -e "$db_path.1.ebwt" ) {
+                        warn "Skipping DATABASE '$db_name' since no Bowtie index was found at '$db_path'\n";
+						$database_skipped_flag = 1;
+                        next;
+                    }
+                } elsif ( $aligner eq 'bowtie2' )  {
+                    unless ( ( -e "$db_path.1.bt2" ) or -e ("$db_path.1.bt2l") ) {
+                        warn "Skipping DATABASE '$db_name' since no Bowtie 2 index was found at '$db_path'\n";
+						$database_skipped_flag = 1;
+                        next;
+                    }
+                } else {    #BWA
+                    unless ( -e "$db_path.amb" ) {
+                        warn "Skipping DATABASE '$db_name' since no BWA index was found at '$db_path'\n";
+						$database_skipped_flag = 1;
+                        next;
+                    }
+                }
+            }
+
+            if ( exists $libraries_temp_list{$db_name} ) {
+                if ( $db_path ne $libraries_temp_list{$db_name} ) {    #Problem: same database name but different path
+                    $problem_libraries{$db_name} = '';
+                }
+            } else {
+                $libraries_temp_list{$db_name} = $db_path;
+                push( @libraries, [ $db_name, $db_path ] );            #Add here to retain the order of the config file (i.e. don't use the hash %libraries_temp_list)
+            }
+        }
+    }
+	
+	if ($bisulfite) {
+		unless (defined $path_to_bismark) {
+			die "Path to Bismark neither specified nor detected automatically\n";
+		}
+	}
+
+    if ( scalar keys(%problem_libraries) > 0 ) {
+        foreach my $library ( sort keys %problem_libraries ) {
+            warn "Error: genome '$library' specified multiple times, but with a different path\n";
+        }
+        die "Please adjust the configuration.\n";
+    } else {
+        foreach my $library (@libraries) {
+            my $db_name = $$library[0];
+            warn "Adding database $db_name\n" unless ($quiet);
+        }
+    }
+
+    if($illumina and $aligner eq 'bwa'){
+    	die "Cannot specify --illumina1_3 when using BWA as the alinger, specify Bowtie or Bowtie 2 instead.\n";
+    }
+	
+	if(defined $tag){
+		die "No databases may be skipped when --tag option selected, please adjust configuration.\n" if($database_skipped_flag);
+		
+		if(defined $filter){
+			if(scalar @libraries != length $filter){
+				warn "User specified filter string of length " . length($filter) . ", but ". scalar @libraries . " genomes specified.\n";
+				die "Please adjust parameters.\n";	
+			}
+		}
+	}
+	
+	#Check that aligner and possibly Bismark are functional
+	if($aligner eq 'bowtie'){
+		die "Aligner $aligner not exectable at '$path_to_bowtie', please adjust configuration.\n" unless( (-x $path_to_bowtie) or ($path_to_bowtie eq 'bowtie') );   #The path is not executable
+	}elsif($aligner eq 'bowtie2'){
+		die "Aligner $aligner not exectable at '$path_to_bowtie2', please adjust configuration.\n" unless( (-x $path_to_bowtie2) or ($path_to_bowtie eq 'bowtie2') );
+	}elsif($aligner eq 'bwa'){
+		die "Aligner $aligner not exectable at '$path_to_bwa', please adjust configuration.\n" unless( (-x $path_to_bwa) or ($path_to_bowtie eq 'bwa') );
+	}
+
+	if ($bisulfite and (defined $path_to_bismark) ) {
+		die "Bismark not exectable at '$path_to_bismark', please adjust configuration.\n" unless( (-x $path_to_bismark) or ($path_to_bismark eq 'bismark') );   #The path is not executable
+	}
+	
+    close CONF or die "Could not close filehandle on '$conf_file' : $!";
+}
+
+#Takes a filename and temporary filename and an interval
+#and creates a temporary file subset
+#Returns the number of reads written to the outputfile
+sub subset {
+
+    my ( $file, $temp_file, $interval ) = @_;
+
+    # Since we're writing we need to do it in
+    # the directory we know we're allowed to write
+    # to.
+    if ($outdir) {
+        $temp_file = ( split( /\//, $temp_file ) )[-1];
+        $temp_file = $outdir . "/" . $temp_file;
+    }
+
+    open( TEMP_SUBSET, '>', $temp_file ) or do {
+        warn "Can't write temp subset file: $!";
+        return;
+    };
+
+    #Move back to the start of the file.  The Seek function will not work if reading the file using zcat (now gunzip -c), so
+    #close and open the file to move back to the start.
+
+    if ( $file =~ /\.gz$/ ) {
+        open( IN_SUBSET, "gunzip -c \'$file\' |" ) or do {
+            warn "Can't read $file: $!";
+            return;
+        };
+    } else {
+        open( IN_SUBSET, $file ) or do {
+            warn "Can't read $file: $!";
+            return;
+        };
+    }
+
+    my $current_count  = 0;
+    my $readsprocessed = 0;    # Stores the total number of sequences searched - initialise at 0 to match array index
+    while (<IN_SUBSET>) {
+ 
+		my $record = $_;
+		$record = substr( $record, 1 );
+		$record = '@' . "$readsprocessed.$record";    #Begin header with index
+		$record .= scalar <IN_SUBSET>;
+		scalar <IN_SUBSET>;    # FASTQ repeated header (or '+')
+		$record .= "+\n";   #Edit FASTQ files so this line is set to '+', this ensures tagged/filtered files will adhere to FASTQ format
+		$record .= scalar <IN_SUBSET>;
+
+		++$current_count;
+
+		next if($current_count <= $skip);   #Skip reads if necessary ($skip is a global variable)
+
+		if ( $current_count % $interval == 0 ) {
+			print TEMP_SUBSET $record;
+			++$readsprocessed;
+		}
+
+        if(defined $top){
+            if($readsprocessed == $top){
+                close(TEMP_SUBSET) or do {
+                    warn "Can't write temp subset file: $!";
+                    return;
+                };
+                return $readsprocessed;
+            }
+
+        }
+    }
+
+    close(TEMP_SUBSET) or do {
+        warn "Can't write temp subset file: $!";
+        return;
+    };
+
+    return $readsprocessed;
+}
+
+sub get_read_length {
+
+    my ($file) = @_;
+
+    #Check if the read file is compressed and open accordingly
+    if ( $file =~ /\.gz$/ ) {
+        open( IN_LENGTH, "gunzip -c \'$file\' |" ) or do {
+            warn "Failed to read $file: $!";
+            return 0;
+        };
+    } else {
+        open( IN_LENGTH, $file ) or do {
+            warn "Failed to read $file: $!";
+            return 0;
+        };
+    }
+
+    my $shortest_length = -1;
+    my $current_count   = 0;
+    while (<IN_LENGTH>) {
+        if (/^@/) {
+            my $seq = scalar <IN_LENGTH>;
+            chomp $seq;
+            if ( ($shortest_length < 0) or (length($seq) < $shortest_length )) {
+                $shortest_length = length($seq);
+            }
+
+            # Skip the rest of the record
+            $_ = scalar <IN_LENGTH>;
+            $_ = scalar <IN_LENGTH>;
+
+            ++$current_count;
+            last if ( $current_count > 1000 );
+        }
+    }
+    return $shortest_length;
+}
+
+sub make_graph {
+
+    my ($file) = @_;
+
+    my $outfile = $file;
+    $outfile =~ s/\.txt$//;
+
+    open( IN_GRAPH, $file ) or die "Can't open data file '$file' to create graph\n";
+
+    my @data;
+    my $percent_no_hits;
+	my $truncated_max_name_length = 13;   #Very long names will overlap, so truncate here
+
+    $_ = <IN_GRAPH>;    #Header
+    $_ = <IN_GRAPH>;    #Header
+
+    while (<IN_GRAPH>) {
+        chomp;
+
+        if (/^\s*$/) {
+            next;
+        }
+
+        if (/^\%Hit_no_genomes: (\S+)/) {
+            $percent_no_hits = $1;
+            last;
+        }
+
+        my ( $name, undef, undef, $unmapped, undef, $percent_one_hit_one_library, undef, $percent_multiple_hits_one_library, undef, $percent_one_hit_multiple_libraries, undef, $percent_multiple_hits_multiple_libraries ) = split(/\t/);
+
+        push @{ $data[0] }, substr($name, 0, $truncated_max_name_length) ;
+        push @{ $data[1] }, $percent_one_hit_one_library;
+        push @{ $data[2] }, $percent_multiple_hits_one_library;
+        push @{ $data[3] }, $percent_one_hit_multiple_libraries;
+        push @{ $data[4] }, $percent_multiple_hits_multiple_libraries;
+        push @{ $data[5] }, '0';    #The %No Hits colour (not used here)
+    }
+
+    close IN_GRAPH or die "Cannot close filehandle on '$file' : $!";
+
+    #Add a separate bar for the reads that hit none of the libraries
+    push @{ $data[0] }, 'No hits';
+    push @{ $data[1] }, '0';
+    push @{ $data[2] }, '0';
+    push @{ $data[3] }, '0';
+    push @{ $data[4] }, '0';
+    push @{ $data[5] }, $percent_no_hits;
+
+    my $graph = GD::Graph::bars->new( ((75 * @{ $data[0] }) + 200), 350 );
+    $graph->set_title_font( "$RealBin/OpenSans-Regular.ttf", 12 );
+    $graph->set_legend_font( "$RealBin/OpenSans-Regular.ttf", 8 );
+    $graph->set_x_label_font( "$RealBin/OpenSans-Regular.ttf", 8 );
+    $graph->set_y_label_font( "$RealBin/OpenSans-Regular.ttf", 8 );
+    $graph->set_x_axis_font( "$RealBin/OpenSans-Regular.ttf", 8 );
+    $graph->set_y_axis_font( "$RealBin/OpenSans-Regular.ttf", 8 );
+    $graph->set_text_clr("black");
+
+    $graph->set_legend( 'One hit\one genome', 'Multiple hits\one genome', 
+    	'One hit\multiple genomes', 'Multiple hits\multiple genomes', 'No hits' );
+
+    $graph->set(
+        y_label     => '% Mapped',
+        title       => ( ( split( /\//, $outfile ) )[-1] ),
+        y_max_value => 100,
+        bar_spacing => 15,
+        transparent => 0,
+        overwrite   => 1,
+        cumulate    => 1,
+        legendclr   => 'black',
+        dclrs       => [('#92c5de', '#0571b0', '#f4a582', '#ca0020', '#999999')],
+		bar_width => 70,
+    );
+
+    my $gd = $graph->plot( \@data );
+
+    $outfile .= ".png";
+
+    open( IMG_GRAPH, '>', $outfile ) or die "Can't write graph to $outfile: $!";
+    binmode IMG_GRAPH;
+    print IMG_GRAPH $gd->png();
+    close IMG_GRAPH or die "Can't write graph to $outfile: $!";
+}
+
+
+
+sub make_bisulfite_graph {
+    my ($file) = @_;
+    my $outfile = $file;
+    $outfile =~ s/\.txt$//;
+
+    open( IN_BIS_GRAPH, $file ) or die "Can't open data file '$file' to create graph\n";
+    my @data;
+    my $percent_no_hits;
+    my $ignore_lines = 1;
+	my $truncated_max_name_length = 13;   #Very long names will overlap, so truncate here
+
+    while (<IN_BIS_GRAPH>) {       
+    	my $line = $_;
+        chomp $line;
+
+        if($ignore_lines){     #Ignore the first half of the file
+        	if($line eq '#Bisulfite read orientation results'){
+        		scalar <IN_BIS_GRAPH>;    #Ignore table header
+        		$ignore_lines = 0;
+        	}
+        	next;
+        }
+
+        next if($line =~ /^\s*$/);
+
+        my ( $name, undef, $pc_ot, undef, $pc_ctot, undef, $pc_ctob, undef, $pc_ob ) = split(/\t/, $line);
+        push @{ $data[0] }, substr($name, 0, $truncated_max_name_length);
+        push @{ $data[1] }, $pc_ot;
+        push @{ $data[2] }, $pc_ctot;
+        push @{ $data[3] }, $pc_ctob;
+        push @{ $data[4] }, $pc_ob;
+    }
+
+    close IN_BIS_GRAPH or die "Cannot close filehandle on '$file' : $!";
+	return unless(scalar @data);    #No data in file (no reads aligned to bisulfite genome)
+
+    my $graph = GD::Graph::bars->new( ((75 * @{ $data[0] }) + 200), 350 );
+    $graph->set_title_font( "$RealBin/OpenSans-Regular.ttf", 12 );
+    $graph->set_legend_font( "$RealBin/OpenSans-Regular.ttf", 8 );
+    $graph->set_x_label_font( "$RealBin/OpenSans-Regular.ttf", 8 );
+    $graph->set_y_label_font( "$RealBin/OpenSans-Regular.ttf", 8 );
+    $graph->set_x_axis_font( "$RealBin/OpenSans-Regular.ttf", 8 );
+    $graph->set_y_axis_font( "$RealBin/OpenSans-Regular.ttf", 8 );
+    $graph->set_text_clr("black");
+
+    $graph->set_legend( 'Original top strand', 
+    	'Complementary to original top strand', 
+    	'Complementary to original bottom strand', 
+    	'Original bottom strand');
+
+    $graph->set(
+        y_label     => '% Reads',
+        title       => ( ( split( /\//, $outfile ) )[-1] ),
+        y_max_value => 100,
+        bar_spacing => 15,
+        transparent => 0,
+        overwrite   => 1,
+        cumulate    => 1,
+        legendclr   => 'black',
+        dclrs       => [('#80cdc1', '#018571', '#a6611a', '#dfc27d')],
+		bar_width => 70,
+    );
+
+    my $gd = $graph->plot( \@data );
+    $outfile .= ".bisulfite_orientation.png";
+    open( IMG_BIS_GRAPH, '>', $outfile ) or die "Can't write graph to $outfile: $!";
+    binmode IMG_BIS_GRAPH;
+    print IMG_BIS_GRAPH $gd->png();
+    close IMG_BIS_GRAPH or die "Can't write graph to $outfile: $!";
+}
+
+
+
+sub find_no_hits {
+    my ( $index_genomes_ref, $file, $no_hits_filename ) = @_;
+
+    $no_hits_filename =~ s/_screen.txt$//;
+    $no_hits_filename .= '_no_hits.fastq';
+    $no_hits_filename .= '.gz' if ($zip_data_output);
+
+    open( IN_NOHITS, '<', $file ) or die "Can't read '$file' : $!";
+
+    if ($zip_data_output) {    #Declared outside of subroutine
+        open( OUT_NOHITS, "| gzip -c - > $no_hits_filename" ) or die "Couldn't write to file '$no_hits_filename' : $!";
+    } else {
+        open( OUT_NOHITS, ">$no_hits_filename" ) or die "Could not write to '$no_hits_filename' : $!";
+    }
+
+    while (<IN_NOHITS>) {
+        my $line1 = $_;
+        chomp $line1;
+
+        #Get and remove the sequence ID
+        $line1 = substr( $line1, 1 );    #Remove '@' at start of read
+        my @line1_elements = split( /\./, $line1 );
+        my $seq_id = shift @line1_elements;
+        $line1 = join( '.', @line1_elements );
+        $line1 = '@' . $line1;
+
+        my $read = "$line1\n";
+        $read .= scalar <IN_NOHITS>;
+        $read .= scalar <IN_NOHITS>;
+        $read .= scalar <IN_NOHITS>;
+
+        if ( !defined ${$index_genomes_ref}[$seq_id] ) {    #Does not exist in array - this is possible since array's last entry is last read that mapped (if only mapping reads returned by bowtie)
+            print OUT_NOHITS $read;
+        } elsif ( ${$index_genomes_ref}[$seq_id] == 0 ) {
+            print OUT_NOHITS $read;
+        }
+    }
+    close IN_NOHITS;
+    close OUT_NOHITS or die "Cannot close filehandle on '$no_hits_filename' : $!";
+}
+
+
+
+sub tag_reads {
+    my ( $index_genomes_ref, $file, $tagged_filename ) = @_;
+
+    $tagged_filename =~ s/_screen.txt$//;
+    $tagged_filename .= '.tagged.fastq';
+    $tagged_filename .= '.gz' if ($zip_data_output);
+    my $number_of_genomes = scalar @libraries;    #Declared outside of subroutine
+
+    open( IN_TAG, '<', $file ) or die "Can't read '$file' : $!";
+
+    if ($zip_data_output) {    #Declared outside of subroutine
+        open( OUT_TAG, "| gzip -c - > $tagged_filename" ) or die "Couldn't write to file '$tagged_filename' : $!";
+    } else {
+        open( OUT_TAG, ">$tagged_filename" ) or die "Could not write to '$tagged_filename' : $!";
+    }
+
+    my $first_read_flag = 1;    #Check whether this the first read in the file
+    while (<IN_TAG>) {
+        my $line1 = $_;
+        chomp $line1;
+
+        #Get and remove the sequence ID
+        $line1 = substr( $line1, 1 );    #Remove '@' at start of read
+        my @line1_elements = split( /\./, $line1 );
+        my $seq_id = shift @line1_elements;
+        $line1 = join( '.', @line1_elements );
+        $line1 = '@' . $line1;
+
+        my $read = "$line1";
+        my $tag;
+
+        if ( !defined ${$index_genomes_ref}[$seq_id] ) {    #Does not exist in array - this is possible since array's last entry is last read that mapped (if only mapping reads returned by bowtie)
+           $tag = 0 x $number_of_genomes; 
+        } elsif ( ${$index_genomes_ref}[$seq_id] == 0 ) {
+           $tag = 0 x $number_of_genomes;    #0 may be used to denote no read mapping to any library
+        } else{
+        	$tag = ${$index_genomes_ref}[$seq_id];
+            $tag = convert2tag($tag);
+         	die "Number of genomes reported and screened don't match. tag:$tag" if(scalar @libraries != length($tag));    #Internal check: this should not happen!
+        }
+
+ 		#What happens if only 0 or not defined?
+        if($first_read_flag){    #Edit tag to include genome names for first read
+        	my $first_line_prefix = '';
+            foreach my $library (@libraries){
+                my $library_name = ${ $library }[0];
+                $first_line_prefix .= "$library_name:";
+            }
+            $tag = $first_line_prefix . $tag;
+        	$first_read_flag = 0;
+        }
+
+        #Rest of read
+        $read .= "#FQST:$tag\n";
+        $read .= scalar <IN_TAG>;
+        $read .= scalar <IN_TAG>;
+        $read .= scalar <IN_TAG>;
+
+        print OUT_TAG $read;
+
+    }
+    close IN_TAG or die "Cannot close filehandle on '$file' : $!";
+    close OUT_TAG or die "Cannot close filehandle on '$tagged_filename' : $!";
+}
+
+
+
+sub check_bowtie_indices {
+    my ( $path_and_basename, $index_to_check ) = @_;
+
+    my $lookup_suffix;
+    if ( ( $index_to_check =~ /^BOWTIE$/i ) or ( $index_to_check =~ /^BOWTIE1$/i ) ) {
+        $lookup_suffix = 'ebwt';
+    } elsif ( $index_to_check =~ /^BOWTIE2$/i ) {
+        $lookup_suffix = 'bt2';
+    } else {
+        die "Subroutine 'check_bowtie_indices' not given a valid index to check: '$index_to_check'\n";
+    }
+
+    my @files = `ls $path_and_basename*` or die "Could not lookup files '$path_and_basename' in 'check_bowtie_indices' subroutine\n";
+    foreach my $file (@files) {
+
+        chomp $file;
+        my $suffix = ( split( /\./, $file ) )[-1];
+        return 1 if ( $suffix eq $lookup_suffix );    #Aligner index found
+    }
+    return 0;                                         #Aligner index not found
+}
+
+
+
+#Subroutine record_hit
+# Takes current value (decimal) and the number of the library
+# Returns new value
+# Binary values stored in units of 2
+# 00 - No hits
+# 01 - 1 hit (X1 means at least 1 hit)
+# 11 - 2 hits (1X means at least 2 hits)
+# So: 110100 -> No hits library1, 1 hit library2, 2+ hits library3
+sub record_hit {
+    my ( $current, $library ) = @_;
+
+    #If maps at least 2, return current value
+    my $pos_lib2 = $library * 2;
+    if ( bit_check( $current, $pos_lib2 ) ) {
+        return $current;
+    }
+
+    #If maps at least 1, adjust flag that so it record maps at least2
+    my $pos_lib1 = $pos_lib2 - 1;
+    my $new_decimal;
+    if ( bit_check( $current, $pos_lib1 ) ) {
+        $new_decimal = bit_or( $current, $pos_lib2 );
+    } else {    #Adjust flag so it records maps at least 1
+        $new_decimal = bit_or( $current, $pos_lib1 );
+    }
+    return $new_decimal;
+}
+
+
+
+### checking that the genome folder, all subfolders and the required bowtie index files exist
+### Returning undefined means the folder could not be found
+sub check_bismark_genome_folder {    #Edit this later
+
+    my $genome_folder   = $_[0];
+    my $original_folder = getcwd;
+	my $problem_with_folder = 0;
+
+    #Bismark looks for a folder named 'Bisulfite_Genome'. The user may have
+    #specified the 1) path to this directory, 2) the path to the directory
+    #containing the 'Bisulfite_Genome' folder or 3) the path and basename of
+    #the conventional genome, and this folder also contains the 'Bisulfite Genome'
+    #folder.
+    unless ( $genome_folder =~ /\/$/ ) {
+        $genome_folder =~ s/$/\//;
+    }
+
+    if ( -d "$genome_folder/Bisulfite_Genome" ) {    #1 Does this directory contain the 'Bisulfite_Genome' folder?
+        $genome_folder = $genome_folder;             #Keep the same
+
+    } elsif ( ( split( /\//, $genome_folder ) )[-1] eq 'Bisulfite_Genome' ) {    #2 Is this the 'Bisulfite_Genome' folder?
+        unless ( -d $genome_folder ) {
+            return undef;
+        }
+        my @genome_folder_elements = split( /\//, $genome_folder );
+        pop(@genome_folder_elements);                                            #Remove Bisulfite_Genome folder
+        if ( scalar @genome_folder_elements == 0 ) {
+            $genome_folder = "./";                                               #Current working direcotry
+        } else {
+            $genome_folder = join( '/', @genome_folder_elements );
+            $genome_folder .= '/';
+        }
+
+    } else {    #3) the path and basename of the conventional genome
+        my @genome_folder_elements = split( /\//, $genome_folder );
+        pop(@genome_folder_elements);    #Remove potential genome basename
+        if ( scalar @genome_folder_elements == 0 ) {
+            $genome_folder = './';       #Current working direcotry
+        } else {
+            $genome_folder = join( '/', @genome_folder_elements );
+
+        }
+
+        unless ( -d "$genome_folder/Bisulfite_Genome" ) {
+            return undef;
+        }
+        $genome_folder .= '/';
+    }
+
+    if ( chdir $genome_folder ) {
+        my $absolute_genome_folder = getcwd;    ## making the genome folder path absolute
+        unless ( $absolute_genome_folder =~ /\/$/ ) {
+            $absolute_genome_folder =~ s/$/\//;
+        }
+
+        #warn "Reference genome folder provided is $genome_folder\t(absolute path is '$absolute_genome_folder)'\n";
+        $genome_folder = $absolute_genome_folder;
+    } else {
+        #die "Failed to move to $genome_folder: $!\nUSAGE: bismark [options] <genome_folder> {-1 <mates1> -2 <mates2> | <singles>} [<hits>]    (--help for more details)\n";
+		chdir $original_folder or die "Failed to return to original working directory\n";
+		return undef;
+	}
+
+    my $CT_dir = "${genome_folder}Bisulfite_Genome/CT_conversion/";
+    my $GA_dir = "${genome_folder}Bisulfite_Genome/GA_conversion/";
+
+    my $bt2_small_index_present = 1;
+    my $bt2_large_index_present = 1;
+
+    if ( $aligner eq 'bowtie2' ) {    ### Bowtie 2
+
+        ### Checking for small indixes first (ending in .bt2)
+
+        # checking the integrity of $CT_dir
+        #chdir $CT_dir or die "Failed to move to directory $CT_dir: $!\n";
+		unless(chdir $CT_dir){
+			chdir $original_folder or die "Failed to return to original working directory\n";
+			return undef;
+		}
+		
+        my @CT_bowtie_index = ( 'BS_CT.1.bt2', 'BS_CT.2.bt2', 'BS_CT.3.bt2', 'BS_CT.4.bt2', 'BS_CT.rev.1.bt2', 'BS_CT.rev.2.bt2' );
+        foreach my $file (@CT_bowtie_index) {
+            unless ( -f $file ) {
+                #warn "The Bowtie 2 index of the C->T converted genome seems to be faulty or non-existant ('$file'). Please run the bismark_genome_preparation before running Bismark\n";
+                $bt2_small_index_present = 0;
+            }
+        }
+
+        # checking the integrity of $GA_dir
+        #chdir $GA_dir or die "Failed to move to directory $GA_dir: $!\n";
+		
+		unless(chdir $GA_dir){
+			chdir $original_folder or die "Failed to return to original working directory\n";
+			return undef;
+		}
+
+        my @GA_bowtie_index = ( 'BS_GA.1.bt2', 'BS_GA.2.bt2', 'BS_GA.3.bt2', 'BS_GA.4.bt2', 'BS_GA.rev.1.bt2', 'BS_GA.rev.2.bt2' );
+        foreach my $file (@GA_bowtie_index) {
+            unless ( -f $file ) {
+                #warn "The Bowtie 2 index of the G->A converted genome seems to be faulty or non-existant ('$file'). Please run bismark_genome_preparation before running Bismark\n";
+                $bt2_small_index_present = 0;
+            }
+        }
+
+        ### Using the small index preferentially
+        if ($bt2_small_index_present) {
+            $bt2_large_index_present = 0;
+        } else {    # only checking for large indexes if the 'normal' one can't be found
+           # warn "\nCouldn't find a traditional small Bowtie 2 index for the genome specified (ending in .bt2). Now searching for a large index instead (64-bit index ending in .bt2l)...\n";
+
+            ### If no small small indexes were found we look for large indexes (64-bit indexes, ending in .bt2l)
+
+            # checking the integrity of $CT_dir
+            #chdir $CT_dir or die "Failed to move to directory $CT_dir: $!\n";		
+			unless(chdir $CT_dir){
+				chdir $original_folder or die "Failed to return to original working directory\n";
+				return undef;
+			}
+			
+			
+            @CT_bowtie_index = ( 'BS_CT.1.bt2l', 'BS_CT.2.bt2l', 'BS_CT.3.bt2l', 'BS_CT.4.bt2l', 'BS_CT.rev.1.bt2l', 'BS_CT.rev.2.bt2l' );
+            foreach my $file (@CT_bowtie_index) {
+                unless ( -f $file ) {
+                    #die "The Bowtie 2 index of the C->T converted genome seems to be faulty or non-existant ('$file'). Please run the bismark_genome_preparation before running Bismark\n";
+                   # $bt2_large_index_present = 0;
+				   chdir $original_folder or die "Failed to return to original working directory\n";
+				   return undef;
+                }
+            }
+
+            ### checking the integrity of $GA_dir
+            #chdir $GA_dir or die "Failed to move to directory $GA_dir: $!\n";
+			unless(chdir $GA_dir){
+				chdir $original_folder or die "Failed to return to original working directory\n";
+				return undef;
+			}
+						
+            @GA_bowtie_index = ( 'BS_GA.1.bt2l', 'BS_GA.2.bt2l', 'BS_GA.3.bt2l', 'BS_GA.4.bt2l', 'BS_GA.rev.1.bt2l', 'BS_GA.rev.2.bt2l' );
+
+            foreach my $file (@GA_bowtie_index) {
+                unless ( -f $file ) {
+                    #die "The Bowtie 2 index of the G->A converted genome seems to be faulty or non-existant ('$file'). Please run bismark_genome_preparation before running Bismark\n";
+                    #$bt2_large_index_present = 0;
+					chdir $original_folder or die "Failed to return to original working directory\n";
+					return undef;
+                }
+            }
+
+            if ($bt2_large_index_present) {
+                #warn "64-bit large genome Bowtie 2 index found...\n";
+            } else {
+				chdir $original_folder or die "Failed to return to original working directory\n";
+				return undef;
+                #die "Failed to detect either a standard (.bt2) or 64-bit (.bt2l) Bowtie 2 index for the genome specified. Please run the bismark_genome_preparation before launching Bismark\n\n";
+            }
+        }
+    }
+
+    else {    ### Bowtie 1
+        ### checking the integrity of $CT_dir
+       # chdir $CT_dir or die "Failed to move to directory $CT_dir: $!\n";
+			unless(chdir $CT_dir){
+				chdir $original_folder or die "Failed to return to original working directory\n";
+				return undef;
+			}
+					
+        my @CT_bowtie_index = ( 'BS_CT.1.ebwt', 'BS_CT.2.ebwt', 'BS_CT.3.ebwt', 'BS_CT.4.ebwt', 'BS_CT.rev.1.ebwt', 'BS_CT.rev.2.ebwt' );
+        foreach my $file (@CT_bowtie_index) {
+            unless ( -f $file ) {
+                #die "The Bowtie index of the C->T converted genome seems to be faulty ($file doesn't exist). Please run bismark_genome_preparation before running Bismark.\n";
+				chdir $original_folder or die "Failed to return to original working directory\n";
+				return undef;
+			}
+        }
+        ### checking the integrity of $GA_dir
+        #chdir $GA_dir or die "Failed to move to directory $GA_dir: $!\n";		
+		unless(chdir $GA_dir){
+			chdir $original_folder or die "Failed to return to original working directory\n";
+			return undef;
+		}
+		
+		
+        my @GA_bowtie_index = ( 'BS_GA.1.ebwt', 'BS_GA.2.ebwt', 'BS_GA.3.ebwt', 'BS_GA.4.ebwt', 'BS_GA.rev.1.ebwt', 'BS_GA.rev.2.ebwt' );
+        foreach my $file (@GA_bowtie_index) {
+            unless ( -f $file ) {
+                #die "The Bowtie index of the G->A converted genome seems to be faulty ($file doesn't exist). Please run bismark_genome_preparation before running Bismark.\n";
+				chdir $original_folder or die "Failed to return to original working directory\n";
+				return undef;
+			}
+        }
+    }
+
+	chdir $original_folder or die "Failed to return to original working directory\n";
+	
+    return $genome_folder;    #Genome ok
+                              # my $CT_index_basename = "${CT_dir}BS_CT";
+                              # my $GA_index_basename = "${GA_dir}BS_GA";
+}
+
+
+
+# Subroutine: convert2tag
+# Takes current value (decimal) and returns the tag string of
+# 0 - no hits; 1 - uniquely maps; 2 - multi-maps for each library
+sub convert2tag {
+    my $decimal = $_[0];
+    my $number_of_libraries = scalar @libraries;    #Declared outside of subroutine
+    my $tag = '';
+
+    for (my $i = 1; $i <= $number_of_libraries; $i++){    #1-based numbering system of libraries
+        $tag .= maps_which_library($decimal, $i);
+    }
+
+    #Ignore the information on whether a read maps to other genomes (e.g 3/4)
+    #Only report if the read does not map to the genome of interest (0), maps
+    #uniquely (1) or multi-maps (2)
+    $tag =~ tr/34/12/;
+    
+    return $tag;
+}
+
+
+
+######################
+#Subroutine: calc_perc
+#Receives a number and a total and returns the perentage value
+#Optional argument: decimal places of the output
+#Subroutine rounds following the sprintf rounding protocol 
+sub calc_perc {
+    my ( $n, $total, $dp ) = @_;
+    
+    if(defined $dp){
+        $dp = abs( int($dp) );
+    }else{
+        $dp = 2;
+    }
+    
+    return 'NA' unless(defined $n and defined $total);   #Avoid initialisation error
+    return 'NA' if($total == 0);    #Avoid division by zero error
+    
+    my $pc = 100 * $n / $total;
+    my $pc_string = '%.' . $dp . 'f';
+
+    $pc = sprintf("$pc_string", $pc);
+
+    
+    return $pc;
+}
+
+
+
+#Subroutine: maps_which_library
+# Takes current value (decimal) and the number of the library to evaluate
+# Returns:
+# 0 - read not map to library
+# 1 - read maps uniquely to this library but maps to no others
+# 2 - read multi-maps to this library but maps to no others
+# 3 - read maps uniquely to this library and maps to at least one other library
+# 4 - read multi-maps to this library and maps to at least one other library
+sub maps_which_library {
+    my ( $val, $library ) = @_;
+    my $single_map         = 0;
+    my $multi_map          = 0;
+    my $maps_other_library = 0;
+
+    my $pos_lib2 = $library * 2;
+    my $pos_lib1 = $pos_lib2 - 1;
+    my $bitshift_lib1;
+    my $bitshift_lib2;
+    my $bitshift_total;
+    my $new_val;
+
+    if ( bit_check( $val, $pos_lib2 ) ) {    #Multimaps library?
+        $multi_map = 1;
+
+        #Does read map to other libraries
+        $bitshift_lib2 = 1 << ( $pos_lib2 - 1 );
+        $bitshift_lib1 = 1 << ( $pos_lib1 - 1 );
+        $bitshift_total = $bitshift_lib2 | $bitshift_lib1;
+        $maps_other_library = 1 if ( $bitshift_total != $val );
+
+    } elsif ( bit_check( $val, $pos_lib1 ) ) {    #Unique maps library?
+        $single_map = 1;
+
+        #Does read map to other libraries
+        $bitshift_lib1 = 1 << ( $pos_lib1 - 1 );
+        $maps_other_library = 1 if ( $bitshift_lib1 != $val );
+    }
+
+    if ( $multi_map and $maps_other_library ) {
+        return 4;
+    } elsif ( $single_map and $maps_other_library ) {
+        return 3;
+    } elsif ($multi_map) {
+        return 2;
+    } elsif ($single_map) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+
+
+#Subroutine: bit_check
+#Takes a decimal number and a position in the binary equivalent (position1 is rightmost)
+#and returns whether it is 0 or 1
+sub bit_check {
+    my ( $decimal, $position ) = @_;
+    my $bitshift = 1 << ( $position - 1 );
+
+    if ( $decimal & $bitshift ) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+#Subroutine: bit_or
+#Takes a decimal number and a position in the binary equivalent (position1 is rightmost)
+#and converts 0->1 at that position
+#Returns new (or possibly original) decimal value
+sub bit_or {
+    my ( $decimal, $position ) = @_;
+    my $bitshift = 1 << ( $position - 1 );
+
+    my $new_decimal = $decimal | $bitshift;
+    return $new_decimal;
+}
+
+
+
+#Subroutine filter_data
+# Takes the FastqQ header
+# Returns 1 if the read passes the filter
+# returns 0 if the read fails
+#
+# Tags:
+# 0: Read does not map
+# 1: Read maps uniquely
+# 2: Read multi-maps
+#
+# Filters:
+# 0: Read does not map
+# 1: Read maps uniquely
+# 2: Read multi-maps
+# 3: Read maps (one or more times)
+# 4: Passes filter 0 or filter 1
+# 5: Passes filter 0 or filter 2
+sub pass_filter_data {
+	my ($header) = @_;
+	my $tag = (split(':', $header))[-1];
+	chomp $tag;
+	
+	unless($tag =~ /^\d+$/){
+		warn "Header found without proper digit-only tag:\n$header\n";
+		die "Please check this is a tag file (see documentation for assistance).\n";
+	}
+	
+	unless (length($filter) == length($tag)){    #Declared outside subroutine
+		warn "User specified filter string of length " . length($filter) . ", but tag has length " . length($tag) . "\n";
+		die "Please adjust parameters.\n";
+	}
+	
+	my $filters_required_to_pass;
+	if(defined $pass){
+		$filters_required_to_pass = $pass;
+	} else {
+		my $non_active_filters = ($filter =~ tr/-//); #Count number of hyphens
+		$filters_required_to_pass = (length $filter) - $non_active_filters;	
+	}
+
+	my $passes = 0;
+
+		for (my $i = 0; $i < length($tag); $i++){
+			my $tag_value = substr($tag, $i, 1);
+			my $filter_value = substr($filter, $i, 1);
+			
+			next if($filter_value eq '-');
+			
+			if($tag_value == 0){
+				if( ($filter_value == 0) or ($filter_value == 4) or ($filter_value == 5) ){
+					$passes++;
+				}
+			
+			} elsif($tag_value == 1) {
+				if( ($filter_value == 1) or ($filter_value == 3) or ($filter_value == 4) ){
+					$passes++;
+				}
+					
+			} elsif($tag_value == 2) {
+				if( ($filter_value == 2) or ($filter_value == 3) or ($filter_value == 5) ){
+					$passes++;
+				}
+			}
+			
+			return 1 if($passes == $filters_required_to_pass);    #May speed up subroutine to end loop here
+		}	
+		return 0;    #Did not pass enough filters		
+}
+
+
+
+__DATA__
+    
+FastQ Screen - Map sequences against multiple genomes
+
+www.bioinformatics.babraham.ac.uk/projects/fastq_screen
+Contact: steven.wingett@babraham.ac.uk
+
+Synopsis
+
+  fastq_screen [OPTIONS]... [FastQ FILE]...
+
+Function
+
+  FastQ Screen is intended to be used as part of a QC pipeline.
+  It allows you to take a sequence dataset and search it
+  against a set of bowtie databases.  It will then generate
+  both a text and a graphical summary of the results to see if
+  the sequence dataset contains the kind of sequences you expect.
+
+Options
+
+ --aligner <func>     Specify the aligner to use for the mapping. Valid 
+                      arguments are 'bowtie', bowtie2' (default) or 'bwa'.  
+                      Bowtie maps with parameters -k 2, Bowtie 2 with 
+                      parameters -k 2 --very-fast-local and BWA with mem -a.  
+                      Local aligners such as BWA or Bowtie2 will be better 
+                      at detecting the origin of chimeric reads. 
+
+ --bisulfite          Process bisulfite libraries. The path to the 
+                      bisulfite aligner (Bismark) may be specified in the 
+                      configuration file. Bismark runs in non-directional 
+                      mode. Either conventional or bisulfite libraries may
+                      be processed, but not both simultaneously. The 
+                      --bisulfite option cannot be used in conjunction with 
+                      --bwa.
+
+ --bowtie <text>      Specify extra parameters to be passed to Bowtie. 
+                      These parameters should be quoted to clearly 
+                      delimit bowtie parameters from fastq_screen 
+                      parameters. You should not try to use this option 
+                      to override the normal search or reporting options 
+                      for bowtie which are set automatically but it might 
+                      be useful to allow reads to be trimmed before
+                      alignment etc.
+
+ --bowtie2 <text>     Specify extra parameters to be passed to Bowtie 2. 
+                      These parameters should be quoted to clearly 
+                      delimit Bowtie 2 parameters from FastQ Screen 
+                      parameters. You should not try to use this option 
+                      to override the normal search or reporting options 
+                      for bowtie which are set automatically but it might 
+                      be useful to allow reads to be trimmed before
+                      alignment etc.  
+
+ --bwa <text>         Specify extra parameters to be passed to BWA. 
+                      These parameters should be quoted to clearly 
+                      delimit BWA parameters from FastQ Screen 
+                      parameters. You should not try to use this option 
+                      to override the normal search or reporting options 
+                      for BWA which are set automatically but it might 
+                      be useful to allow reads to be trimmed before
+                      alignment etc. 
+
+ --conf <path>        Manually specify a location for the configuration.
+ 
+ --filter <text>      Produce a FASTQ file containing reads mapping to 
+                      specified genomes. Pass the argument a string of
+                      characters (0, 1, 2, 3, -), in which each character 
+                      corresponds to a reference genome (in the order the 
+                      reference genome occurs in the configuration file).  
+                      Below gives an explanation of each character.		
+                      0: Read does not map
+                      1: Read maps uniquely
+                      2: Read multi-maps
+                      3: Read maps (one or more times)
+                      4: Passes filter 0 or filter 1
+                      5: Passes filter 0 or filter 2
+                      -: Do not apply filter to this genome
+				
+                      Consider mapping to three genomes (A, B and C), the 
+                      string '003' produces a file in which reads do not 
+                      map to genomes A or B, but map (once or more) to 
+                      genome C.  The string '--1' would generate a file in 
+                      which reads uniquely map to genome C. Whether reads 
+                      map to genome A or B would be ignored.
+					  
+                      A read needs to pass all the genome filters to be
+                      considered valid (unless --pass specified).
+			   
+                      When --filter is used in conjuction with --tag, FASTQ
+                      files shall be mapped, tagged and then filtered. If
+                      the --tag option is not selected however, the input 
+                      FASTQ file should have been previously tagged.
+				
+ --force              Do not terminate if output files already exist,
+                      instead overwrite the files.
+
+ --help               Print program help and exit.
+
+ --illumina1_3        Assume that the quality values are in encoded in
+                      Illumina v1.3 format. Defaults to Sanger format
+                      if this flag is not specified.
+
+ --inverse            Inverts the --filter results i.e. reads that pass
+                      the --filter parameter will not pass when 
+                      --filter --inverse are specified together, and vice
+                      versa.					  
+
+ --nohits             Writes to a file the sequences that did not map to 
+                      any of the specified genomes. This option is 
+                      equivalent to specifying --tag --filter 0000 (number
+                      of zeros corresponds to the number of genomes
+                      screened).  By default the whole input file will be
+                      mapped, unless overridden by --subset.				
+
+ --outdir <text>      Specify a directory in which to save output files.
+                      If no directory is specified then output files
+                      are saved in the current working directory.
+					  
+ --pass <int>         Used in conjunction with --filter. By default all
+                      genome filters must be passed for a read to pass
+                      the --filter option.  However, a minimum number 
+                      of genome filters may be specified that a read
+                      needs pass to be considered to pass the --filter
+                      option. (--pass 1 effecitively acts as an OR
+                      boolean operator for the genome filters.)					  
+					  
+ --quiet              Suppress all progress reports on stderr and only
+                      report errors.
+
+ --subset <int>       Don't use the whole sequence file, but create a 
+                      temporary dataset of this specified number of 
+                      reads. The dataset created will be of 
+                      approximately (within a factor of 2) of this size. 
+                      If the real dataset is smaller than twice the 
+                      specified size then the whole dataset will be used. 
+                      Subsets will be taken evenly from throughout the 
+                      whole original dataset. By Default FastQ Screen 
+                      runs with this parameter set to 100000. To process
+                      an entire dataset however, adjust --subset to 0.
+
+--tag                 Label each FASTQ read header with a tag listing to 
+                      which genomes the read did, or did not align. The 
+                      first read in the output FASTQ file will list the 
+                      full genome names along with a score denoting 
+                      whether the read did not align (0), aligned 
+                      uniquely to the specified genome (1), or aligned 
+                      more than once (2). In subsequent reads the 
+                      genome names are omitted and only the score is 
+                      printed, in the same order as the first line.
+
+                      This option results in the he whole file being 
+                      processed unless overridden explicitly by the user 
+                      with the --subset parameter 
+
+--threads <int>       Specify across how many threads bowtie will be
+                      allowed to run. Overrides the default value set
+                      in the configuration file
+
+--top <int>/<int,int> Don't use the whole sequence file, but create a 
+                      temporary dataset of the specified number of 
+                      reads taken from the top of the original file. It is
+                      also possible to specify the number of lines to skip
+                      before beginning the selection e.g. 
+                      --top 100000,5000000 skips the first five million 
+                      reads and selects the subsequent one hundred thousand 
+                      reads. While this option is usually faster than 
+                      comparable --subset operations, it does not prevent 
+                      biases arising from non-uniform distribution of 
+                      reads in the original FastQ file. This option should 
+                      only be used when minimising processing time is of 
+                      highest priority. 
+
+--version             Print the program version and exit.
+
+2018 Babraham Institute, Cambridge, UK 
