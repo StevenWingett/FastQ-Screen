@@ -1,6 +1,12 @@
+Release notes for FastQ Screen v0.12.2 (16 August 2018)
+-------------------------------------------------------
+For bisulfite mapping, bismark is now run in --ambiguous 
+mode to identify multi-mapping reads.
+
+
+
 Release notes for FastQ Screen v0.12.1 (24 July 2018)
 -----------------------------------------------------
-
 Added --inverse option for filtering files.
 
 Improved results display format.

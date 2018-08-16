@@ -12,7 +12,7 @@ use Cwd;
 use Data::Dumper;
 
 
-our $VERSION = "0.12.1";
+our $VERSION = "0.12.2";
 
 ###########################################################################
 ###########################################################################
@@ -1036,6 +1036,8 @@ sub commify {
     return scalar reverse $text;
 }
 
+
+
 #Returns a suitably formatted datestamp
 sub datestampGenerator {
     my @now       = localtime();
@@ -1049,6 +1051,7 @@ sub datestampGenerator {
 }
 
 
+
 #Uses Bismark to map an input file to a specified genome
 #Results stored in the @index_genomes array
 sub bisulfite_mapping {
@@ -1057,6 +1060,7 @@ sub bisulfite_mapping {
     my $bismark_command;
     my $sam_output_option = '';
     $sam_output_option = '--sam' unless ( defined $path_to_samtools );
+	my $db_name = $$library[0];
 
     #Determine whether to execute bowtie1 or bowtie2
     my $prefix = $library->[0];
@@ -1069,7 +1073,7 @@ sub bisulfite_mapping {
 			$path_to_aligner_command = join('/', @elements) . '/';
 			$path_to_aligner_command = '--path_to_bowtie ' . $path_to_aligner_command;
 		}	
-        $bismark_command = "$path_to_bismark $sam_output_option $path_to_aligner_command --bowtie1 $bowtie_opts $illumina_flag --non_directional --prefix $prefix --output_dir $outdir $library->[1] $file 1>/dev/null 2>$error_filename";
+        $bismark_command = "$path_to_bismark $sam_output_option $path_to_aligner_command --ambiguous --bowtie1 $bowtie_opts $illumina_flag --non_directional --prefix $prefix --output_dir $outdir $library->[1] $file 1>/dev/null 2>$error_filename";
     } else {    #Using Bowtie2
 
 	if($path_to_bowtie ne 'bowtie2'){
@@ -1079,7 +1083,7 @@ sub bisulfite_mapping {
 			$path_to_aligner_command = join('/', @elements) . '/';
 			$path_to_aligner_command = '--path_to_bowtie ' . $path_to_aligner_command;   #Bismark uses --path_to_bowtie for Bowtie1 and Bowtie2
 		}	
-		$bismark_command = "$path_to_bismark $sam_output_option $path_to_aligner_command --bowtie2 $bowtie2_opts $illumina_flag --non_directional --prefix $prefix --output_dir $outdir $library->[1] $file 1>/dev/null 2>$error_filename";
+		$bismark_command = "$path_to_bismark $sam_output_option $path_to_aligner_command --ambiguous --bowtie2 $bowtie2_opts $illumina_flag --non_directional --prefix $prefix --output_dir $outdir $library->[1] $file 1>/dev/null 2>$error_filename";
     }
 
     !system($bismark_command) or die "Could not run Bismark with command: '$bismark_command'.\n";
@@ -1148,7 +1152,32 @@ sub bisulfite_mapping {
 			die "Unexpected combination of read and genome conversion: '$read_conversion' / '$genome_conversion'\n";
     	}
  	}
+	
+	#Multi-mapping reads have been written to "ambiguous" FASTQ files
+	#Extract the IDs and report as multi-mapping
+	my $ambiguous_file = basename($file);
+	$ambiguous_file = $outdir . "$db_name.$ambiguous_file" . "_ambiguous_reads.fq.gz";
+	open (AMBIGUOUS_FILE, "gunzip -c $ambiguous_file  |") or die "Could not read file '$ambiguous_file ' : $!";
 
+	while (<AMBIGUOUS_FILE>) {
+		my $seqname = $_;
+		($seqname) = split(/\./, $seqname);
+		$seqname = substr($seqname, 1);   #Ignore @
+		
+		#Record twice, so reads from the ambiguous file are considered as multi-mapping
+		unless ( defined ${$index_genomes_ref}[$seqname] ) {
+		    ${$index_genomes_ref}[$seqname] = 0;    #Initialise - array may have 'gaps'
+		}
+		
+		${$index_genomes_ref}[$seqname] = record_hit( ${$index_genomes_ref}[$seqname], $library_index + 1 );
+		${$index_genomes_ref}[$seqname] = record_hit( ${$index_genomes_ref}[$seqname], $library_index + 1 );	
+		
+		scalar <AMBIGUOUS_FILE>;   #Ignore rest of FASTQ read
+		scalar <AMBIGUOUS_FILE>;
+		scalar <AMBIGUOUS_FILE>;
+	}
+	close AMBIGUOUS_FILE  or die "Cannot close filehandle on '$ambiguous_file' : $!";
+	
     #Check the Standard Error and report any errors
     #Bowtie reports the alignment summary to standard error, so ignore the alignment summary
     while (<$error_fh>) {
@@ -1163,6 +1192,7 @@ sub bisulfite_mapping {
     my $bismark_report_file = $mapped_file;
     $bismark_report_file =~ s/\.sam$|\.bam$/_SE_report.txt/;
     unlink $bismark_report_file or die "Could not delete Bismark report file '$bismark_report_file'.\n";
+	unlink $ambiguous_file or die "Could not delete Bismark amibiguous reads outputfile '$ambiguous_file'.\n";
 }
 
 #Uses Bowtie or Bowtie2 to map an input file to a specified genome
@@ -1170,7 +1200,6 @@ sub bisulfite_mapping {
 sub conventional_mapping {
 
     my ( $illumina_flag, $read_length, $library, $file, $error_filename, $index_genomes_ref, $library_index, $error_fh ) = @_;
-
     my $aligner_command;
 
     #Determine whether to execute bowtie1 or bowtie2
