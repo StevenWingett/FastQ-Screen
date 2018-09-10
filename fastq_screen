@@ -9,10 +9,11 @@ use File::Spec;
 use File::Basename;
 use File::Temp qw/ tempfile tempdir /;
 use Cwd;
+use File::Path;
 use Data::Dumper;
 
 
-our $VERSION = "0.12.2";
+our $VERSION = "0.13.0.dev";
 
 ###########################################################################
 ###########################################################################
@@ -66,6 +67,7 @@ my $top;
 my $skip = 0;    #Specified via $top variable
 my $pass;
 my $inverse;
+my $get_genomes;
 
 my $config_result = GetOptions(
     "subset=i"    => \$subset_count,
@@ -88,7 +90,8 @@ my $config_result = GetOptions(
 	"filter=s"	  => \$filter,
     "top=s"       => \$top,
 	"pass=i"	  => \$pass,
-	"inverse"     => \$inverse
+	"inverse"     => \$inverse,
+	"get_genomes" => \$get_genomes,
 );
 
 die "Could not parse options, please adjust configuration.\n" unless ($config_result);
@@ -116,6 +119,12 @@ if ( defined $outdir ) {
     $outdir = getcwd;
 }
 $outdir .= '/';                                #Add trailing forward slash, so don't need to do this again
+
+
+if(defined $get_genomes){
+	get_genomes();
+	exit(0);
+}
 
 
 if(defined $filter){
@@ -2352,6 +2361,57 @@ sub pass_filter_data {
 		return 0;    #Did not pass enough filters		
 }
 
+#Subroutine filter_data
+#Downloads Bowtie2 indices to current working directory or to the --outdir
+sub get_genomes{
+	
+	my $cwd = getcwd;
+	
+	#Download configuration files and indices
+	chdir $outdir;
+	print "Downloading FastQ Screen Genomes\n";
+	my $download_folder = "www.bioinformatics.babraham.ac.uk/projects/fastq_screen/FastQ_Screen_Genomes/";
+	my $command = "wget -r --no-parent -R 'index.html*' $download_folder" ;
+	!system($command) or die "Could not run command '$command'\n";
+	$command = "mv $download_folder " . $outdir;
+	!system($command) or die "Could not run command '$command'\n";
+
+	rmtree("www.bioinformatics.babraham.ac.uk");
+	
+	
+	#Read in the configuration file
+	my $conf_file = 'FastQ_Screen_Genomes/fastq_screen.conf';
+	open(CONF_IN, '<', $conf_file) or die "Could not open '$conf_file' : $!";
+	
+	my $conf_script_text = '';
+	while(<CONF_IN>){
+		my $line = $_;
+		if($line =~ /^DATABASE/){
+			$line =~ s/\[FastQ_Screen_Genomes_Path\]/\/$outdir\/FastQ_Screen_Genomes/;
+			$line =~ s/\/\//\//g;   #Remove double forward slash
+		}	
+		$conf_script_text .= $line;
+	}
+		
+	close CONF_IN or die "Could not close '$conf_file' : $!";
+	
+	
+	#Edit the configuration file text to add the correct genome path
+	open(CONF_OUT, '>', $conf_file) or die "Could not write to '$conf_file' : $!";
+	print CONF_OUT $conf_script_text;	
+	close CONF_OUT or die "Could not close '$conf_file' after editing : $!";
+	
+	chdir $cwd;
+	
+	#Notes to user
+	print "*****************************\n";
+	print "Genomes downloaded to $outdir" . "FastQ_Screen_Genomes\n";
+	print "Use the fastq_screen.conf file with the command:\n$outdir" . "fastq_screen --conf fastq_screen.conf\n";
+	print "Alternatively, copy the new configuration file to $RealBin\n";
+}
+
+
+
 
 
 __DATA__
@@ -2450,7 +2510,10 @@ Options
 				
  --force              Do not terminate if output files already exist,
                       instead overwrite the files.
-
+ 
+ --get_genomes        Download pre-indexed Bowtie2 genomes for a range of
+                      commonly studied species and sequences.
+					  
  --help               Print program help and exit.
 
  --illumina1_3        Assume that the quality values are in encoded in

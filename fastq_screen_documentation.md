@@ -84,9 +84,6 @@ Once you have built your index you can configure the FastQ Screen program.  You 
 
 The other options you can set in the config file are the location of the aligner binary (if it's not in your path),and the number of threads you want to allocate to the aligner when performing your screen.  The number of threads will be the number of CPU cores the code will run on so you shouldn't set this value higher than the number of physical cores you have in your machine. The more threads you can allow the faster the searching part of the screen will run.
 
-
-Running the program
-===================
 An example command is shown below.  This would process two FASTQ files and would create the screen output in the same directory as the original files. 
 
 ``fastq_screen sample1.fastq sample2.fastq``
@@ -98,6 +95,17 @@ By default the program looks for a configuration file named "fastq\_screen.conf"
 Full documentation for the FastQ Screen options can be obtained by running:
 
 ``fastq_screen --help``
+
+
+Obtaining reference genomes
+===========================
+The sequence aligners Bowtie, Bowtie2 and BWA require reference genomes against which to map FASTQ reads.  If you do not have these genomes already in place on your system, you can build them by downloading genome sequence FASTA files from a public database (such as those made available at the `NCBI website <"https://www.ncbi.nlm.nih.gov/genome">`_).  Then, simply create genome indices from the FASTA files as detailed in the aligner instruction manual.
+
+Alternatively, pre-built Bowtie2 indices of commonly used genomes may be downloaded directly from the Babraham Bioinformatics website with the command:
+
+``fastq_screen --get_genomes``
+
+The genome indices will be downloaded to a folder named "FastQ_Screen_Genomes" in your current working directory (or to another location if --outdir is specified).   In addition to the genome indices, the folder FastQ_Screen_Genomes will contain a configuration file named "fastq_screen.conf", which is ready to use and lists the correct paths to the newly downloaded reference genomes.  This configuration file can be passed to fastq_screen with the --conf command, or may be used as the default configuration by copying the file to the folder containing the fastq_screen script.
 
 
 Test Dataset
