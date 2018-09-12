@@ -14,7 +14,6 @@ In contrast, poor sequencing results will include results from one or more unexp
  .. image:: http://www.bioinformatics.babraham.ac.uk/projects/fastq_screen/bad_sequence_screen.png
 
 
-
 FastQ Screen online tutorials
 =============================
 To assist your understanding of FastQ Screen and how it should be used, we have prepared a series of short training videos.
@@ -38,6 +37,17 @@ The FastQ Screen Homepage can be found `here <http://www.bioinformatics.babraham
 Download
 ========
 FastQ Screen may be obtained from the `Babraham Bioinformatics download page. <http://www.bioinformatics.babraham.ac.uk/projects/download.html#fastqscreen>`_
+
+
+Requirements summary
+====================
+* Requirements: Linux-based operating system
+* Language: Perl
+* Bowtie, Bowtie2 or BWA
+* gzip (optional)
+* SAMtools (optional)
+* GD::Graph (optional)
+* Bismark (bisulfite mapping only)
 
 
 Installation
@@ -80,7 +90,7 @@ Configuration
 =============
 In order to use FastQ Screen you will need to configure some genome databases for the program to search.  This will involve downloading the sequences for the databases in FASTA format and then using either Bowtie, Bowtie2 or BWA to build the relevant index files.  Please note: the aligner used to build the index files must be used to map the reads
 
-Once you have built your index you can configure the FastQ Screen program.  You do this by editing the fastq\_screen.conf.example file which is distributed with the program.  This shows an example set of database configurations which you will need to change to reflect the actual databases you have set up.  Rename the file to fastq\_screen.conf after you have finished editing.
+Once you have built your index you can configure the FastQ Screen program.  You do this by editing the fastq\_screen.conf.example file which is distributed with the program.  This shows an example set of database configurations which you will need to change to reflect the actual databases you have set up.  FastQ Screen can process up to a maximim of 32 reference genomes.  Rename the file to fastq\_screen.conf after you have finished editing.
 
 The other options you can set in the config file are the location of the aligner binary (if it's not in your path),and the number of threads you want to allocate to the aligner when performing your screen.  The number of threads will be the number of CPU cores the code will run on so you shouldn't set this value higher than the number of physical cores you have in your machine. The more threads you can allow the faster the searching part of the screen will run.
 
@@ -99,7 +109,7 @@ Full documentation for the FastQ Screen options can be obtained by running:
 
 Obtaining reference genomes
 ===========================
-The sequence aligners Bowtie, Bowtie2 and BWA require reference genomes against which to map FASTQ reads.  If you do not have these genomes already in place on your system, you can build them by downloading genome sequence FASTA files from a public database (such as those made available at the `NCBI website <"https://www.ncbi.nlm.nih.gov/genome">`_).  Then, simply create genome indices from the FASTA files as detailed in the aligner instruction manual.
+The sequence aligners Bowtie, Bowtie2 and BWA require reference genomes against which to map FASTQ reads.  If you do not have these genomes already in place on your system, you can build them by downloading genome sequence FASTA files from a public database (such as those made available at the `NCBI website <https://www.ncbi.nlm.nih.gov/genome>`_).  Then, simply create genome indices from the FASTA files as detailed in the instructions for your chosen aligner.
 
 Alternatively, pre-built Bowtie2 indices of commonly used genomes may be downloaded directly from the Babraham Bioinformatics website with the command:
 
@@ -121,6 +131,11 @@ To confirm FastQ Screen functions correctly on your system please download the T
 3. Create a configuration file tailored to your system.
 
 4. Run FastQ Screen
+
+
+Interpreting the results from a large number of datasets
+========================================================
+FastQ Screen output is compatible with `MultiQC <http://multiqc.info>`_, a specialist tool for aggregating results from bioinformatics analyses across many samples into a single report.  We recommend using this tool for quickly interpreting the FastQ Screen results from a large number of datasets.
 
 
 Screening Bisulfite Samples
@@ -172,6 +187,37 @@ By adjusting the filters and, if necessary, undergoing several rounds of filteri
 A video tutorial explaining how to filter FASTQ files may be found `here <https://www.youtube.com/watch?v=eJcAv-Dt57I&t=1s_>`__ 
 
 
+Performance
+===========
+The memory requirements and the time taken to process a dataset will vary substantially depending on the input and user settings.   The table below summarises the results of mapping two different FASTQ files against a panel of genomes (*H. sapiens, M. musculus, R. norvegicus, E. coli, D. melanogaster, C. elegans. A. thaliana, S. cerevisiae, PhiX174*, sequencing adapters, commonly used vectors, rRNA, mitochondria, lambda phage).  The table below summarises the results.
+
+The table below summarises the time taken to process large and small FASTQ files (output from HiSeq and MiSeq sequencers respectively).  Both FASTQ files, which were derived from sequencing human samples, were processed using 14 threads on a 256 node compute cluster, running CentOS v6.2 and using Bowtie2 v2.3.2 as the aligner.  
+ 
+===============================	   	=========	===========
+Classification				File A		File B
+===============================	   	=========	===========
+Number of reads				7,535,739	250,033,919
+QC Mode Wallclock time			 00:02:03	   00:17:15						
+QC Mode System time			 00:01:14	   00:02:29
+QC Mode CPU time			 00:06:48	   00:30:22
+QC Mode Maximum memory (GB)		    4.620	      4.621
+Filter Mode Wallclock time		 00:36:48	   15:09:58			
+Filter Mode System time			 00:38:34	 1:03:03:32
+Filter Mode CPU time			 05:11:01	 4:06:56:22
+Filter Mode Maximum memory (GB)		    4.733	     12.037
+===============================  	=========	===========
+
+Many factors will determine the memory requirements of FASTQ Screen and the time taken to process a file.  Listed below are the most important factors to consider:
+* System processor, memory and other jobs being processed simulateously
+* Number of threads
+* Number of genomes to screen
+* Number of reads to process
+* Whether FastQ Screen subsets the data prior to processing.  Typically, for QC reports, a file is subset to 100,000 reads prior to mapping.  When filtering files, subsetting is typically not performed.
+* Bisulfite libraries take considerably longer to process
+
+While it is not possible to cover every scenario, as a general rule using FastQ Screen to QC a dataset should take minutes whereas filtering a large dataset may take a several hours.
+
+
 FastQ Screen Options Summary
 ============================
 **aligner \<func\> :**  Specify the aligner to use for the mapping. Valid arguments are 'bowtie', bowtie2' (default) or 'bwa'.  Bowtie maps with parameters -k 2, Bowtie 2 with parameters -k 2 --very-fast-local and BWA with mem -a.  Local aligners such as BWA or Bowtie2 will be better at detecting the origin of chimeric reads.
@@ -208,6 +254,8 @@ When --filter is used in conjunction with --tag, FASTQ files shall be mapped, ta
 				
 **force :**  Do not terminate if output files already exist, instead overwrite the files.
 
+**get_genomes :**  Download pre-indexed Bowtie2 genomes for a range of commonly studied species and sequences.
+
 **help :**  Print program help and exit.
 
 **illumina1_3 :** Assume that the quality values are in encoded in Illumina v1.3 format. Defaults to Sanger format if this flag is not specified.
@@ -242,6 +290,6 @@ FastQ Screen is distributed under a "GNU General Public License", a copy of whic
 
 Report problems
 ===============
-If you have any problems running this program you can either open them as bugs in our `bug tracking system <http://www.bioinformatics.babraham.ac.uk/bugzilla>`_.
+If you have any problems running this program you can report them on `GitHub <https://github.com/StevenWingett/FastQ-Screen/issues>`_.
 
 Or you can email them to: steven.wingett@babraham.ac.uk

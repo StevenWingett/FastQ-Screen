@@ -2370,14 +2370,31 @@ sub get_genomes{
 	#Download configuration files and indices
 	chdir $outdir;
 	print "Downloading FastQ Screen Genomes\n";
-	my $download_folder = "www.bioinformatics.babraham.ac.uk/projects/fastq_screen/FastQ_Screen_Genomes/";
-	my $command = "wget -r --no-parent -R 'index.html*' $download_folder" ;
+		
+	#Download a text file to determine where the genomes are kept. Doing this (instead of downloading the
+	#genomes directly) means the genomes may be moved to new locations without requiring changes to this
+	#script.  At present, the genomes are stored on Babraham FTP1 (valid for 1 year), but they should be moved
+	#to a permanent location on the webserver, when more space is made available.
+	my $location_file = 'www.bioinformatics.babraham.ac.uk/projects/fastq_screen/genome_locations.txt';
+	my $command = "wget $location_file";	
+	!system($command) or die "Could not run command '$command'\n";
+	$location_file = 'genome_locations.txt';
+	open(LOCATION, '<', $location_file) or die "Could not open '$location_file' : $!";
+	my $download_folder = scalar <LOCATION>;
+	chomp $download_folder;
+	close LOCATION or die "Could not close '$location_file' : $!";
+	unlink('genome_locations.txt');
+	
+	#my $download_folder = "www.bioinformatics.babraham.ac.uk/projects/fastq_screen/FastQ_Screen_Genomes/";
+	#my $download_folder = 'ftp1.babraham.ac.uk/ftpusr31/FastQ_Screen_Genomes/';
+	
+	$command = "wget -r --no-parent -R 'index.html*' $download_folder" ;
 	!system($command) or die "Could not run command '$command'\n";
 	$command = "mv $download_folder " . $outdir;
 	!system($command) or die "Could not run command '$command'\n";
 
-	rmtree("www.bioinformatics.babraham.ac.uk");
-	
+	#rmtree("www.bioinformatics.babraham.ac.uk");
+	rmtree((split(/\//, $download_folder))[0]);
 	
 	#Read in the configuration file
 	my $conf_file = 'FastQ_Screen_Genomes/fastq_screen.conf';
