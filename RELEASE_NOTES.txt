@@ -1,3 +1,11 @@
+Release notes for FastQ Screen v0.13.0 (12 September 2018)
+----------------------------------------------------------
+Added --get_genomes option.
+
+Updated documentation.
+
+
+
 Release notes for FastQ Screen v0.12.2 (16 August 2018)
 -------------------------------------------------------
 For bisulfite mapping, bismark is now run in --ambiguous 
