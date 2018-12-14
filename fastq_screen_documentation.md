@@ -288,6 +288,15 @@ Terms of use
 FastQ Screen is distributed under a "GNU General Public License", a copy of which is distributed with the software.
 
 
+How to cite FastQ Screen
+========================
+
+FastQ Screen was published in the open access journal F1000Research. 
+
+Wingett SW and Andrews S. FastQ Screen: A tool for multi-genome mapping and quality control [version 2; referees: 4 approved]. F1000Research 2018, 7:1338
+(https://doi.org/10.12688/f1000research.15931.2)
+
+
 Report problems
 ===============
 If you have any problems running this program you can report them on `GitHub <https://github.com/StevenWingett/FastQ-Screen/issues>`_.
