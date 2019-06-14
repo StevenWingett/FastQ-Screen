@@ -13,7 +13,7 @@ use File::Path;
 use Data::Dumper;
 
 
-our $VERSION = "0.13.0";
+our $VERSION = "0.13.1.dev";
 
 ###########################################################################
 ###########################################################################
@@ -1085,7 +1085,7 @@ sub bisulfite_mapping {
         $bismark_command = "$path_to_bismark $sam_output_option $path_to_aligner_command --ambiguous --bowtie1 $bowtie_opts $illumina_flag --non_directional --prefix $prefix --output_dir $outdir $library->[1] $file 1>/dev/null 2>$error_filename";
     } else {    #Using Bowtie2
 
-	if($path_to_bowtie ne 'bowtie2'){
+	if($path_to_bowtie2 ne 'bowtie2'){
 			$path_to_aligner_command = $path_to_bowtie2;
 			my @elements = split(/\//, $path_to_aligner_command);
 			pop @elements;
@@ -2380,13 +2380,12 @@ sub get_genomes{
 	!system($command) or die "Could not run command '$command'\n";
 	$location_file = 'genome_locations.txt';
 	open(LOCATION, '<', $location_file) or die "Could not open '$location_file' : $!";
+	scalar <LOCATION> if $bisulfite;   #Use second line in file if --bisulfite mode
 	my $download_folder = scalar <LOCATION>;
 	chomp $download_folder;
 	close LOCATION or die "Could not close '$location_file' : $!";
 	unlink('genome_locations.txt');
 	
-	#my $download_folder = "www.bioinformatics.babraham.ac.uk/projects/fastq_screen/FastQ_Screen_Genomes/";
-	#my $download_folder = 'ftp1.babraham.ac.uk/ftpusr31/FastQ_Screen_Genomes/';
 	
 	$command = "wget -r --no-parent -R 'index.html*' $download_folder" ;
 	!system($command) or die "Could not run command '$command'\n";
@@ -2397,14 +2396,27 @@ sub get_genomes{
 	rmtree((split(/\//, $download_folder))[0]);
 	
 	#Read in the configuration file
-	my $conf_file = 'FastQ_Screen_Genomes/fastq_screen.conf';
+	my $conf_file;
+	if($bisulfite){
+		$conf_file = 'FastQ_Screen_Genomes_Bisulfite/fastq_screen.conf';
+	} else {
+		$conf_file = 'FastQ_Screen_Genomes/fastq_screen.conf';
+	}
+
 	open(CONF_IN, '<', $conf_file) or die "Could not open '$conf_file' : $!";
 	
 	my $conf_script_text = '';
+	my $downloaded_genomes_folder = $outdir;
+	if($bisulfite){
+		$downloaded_genomes_folder .= 'FastQ_Screen_Genomes_Bisulfite';
+	} else {
+		$downloaded_genomes_folder .= 'FastQ_Screen_Genomes';
+	}
+	
 	while(<CONF_IN>){
 		my $line = $_;
 		if($line =~ /^DATABASE/){
-			$line =~ s/\[FastQ_Screen_Genomes_Path\]/\/$outdir\/FastQ_Screen_Genomes/;
+			$line =~ s/\[FastQ_Screen_Genomes_Path\]/$downloaded_genomes_folder/;
 			$line =~ s/\/\//\//g;   #Remove double forward slash
 		}	
 		$conf_script_text .= $line;
@@ -2422,8 +2434,8 @@ sub get_genomes{
 	
 	#Notes to user
 	print "*****************************\n";
-	print "Genomes downloaded to $outdir" . "FastQ_Screen_Genomes\n";
-	print "Use the fastq_screen.conf file with the command:\n$outdir" . "fastq_screen --conf fastq_screen.conf\n";
+	print "Genomes downloaded to $downloaded_genomes_folder\n";
+	print "Use the fastq_screen.conf file with the command:\nfastq_screen --conf " . $downloaded_genomes_folder . "/fastq_screen.conf\n";
 	print "Alternatively, copy the new configuration file to $RealBin\n";
 }
 
@@ -2529,7 +2541,9 @@ Options
                       instead overwrite the files.
  
  --get_genomes        Download pre-indexed Bowtie2 genomes for a range of
-                      commonly studied species and sequences.
+                      commonly studied species and sequences. If used with
+                      --bisulfite, Bismark bisulfite Bowtie2 indices will
+                      be downloaded instead.					  
 					  
  --help               Print program help and exit.
 
