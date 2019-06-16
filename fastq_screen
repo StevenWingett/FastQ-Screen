@@ -13,7 +13,7 @@ use File::Path;
 use Data::Dumper;
 
 
-our $VERSION = "0.13.1.dev";
+our $VERSION = "0.14.0.dev";
 
 ###########################################################################
 ###########################################################################
@@ -1512,9 +1512,9 @@ sub load_configuration {
 	if($aligner eq 'bowtie'){
 		die "Aligner $aligner not exectable at '$path_to_bowtie', please adjust configuration.\n" unless( (-x $path_to_bowtie) or ($path_to_bowtie eq 'bowtie') );   #The path is not executable
 	}elsif($aligner eq 'bowtie2'){
-		die "Aligner $aligner not exectable at '$path_to_bowtie2', please adjust configuration.\n" unless( (-x $path_to_bowtie2) or ($path_to_bowtie eq 'bowtie2') );
+		die "Aligner $aligner not exectable at '$path_to_bowtie2', please adjust configuration.\n" unless( (-x $path_to_bowtie2) or ($path_to_bowtie2 eq 'bowtie2') );
 	}elsif($aligner eq 'bwa'){
-		die "Aligner $aligner not exectable at '$path_to_bwa', please adjust configuration.\n" unless( (-x $path_to_bwa) or ($path_to_bowtie eq 'bwa') );
+		die "Aligner $aligner not exectable at '$path_to_bwa', please adjust configuration.\n" unless( (-x $path_to_bwa) or ($path_to_bwa eq 'bwa') );
 	}
 
 	if ($bisulfite and (defined $path_to_bismark) ) {
