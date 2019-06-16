@@ -18,7 +18,7 @@ our $VERSION = "0.14.0.dev";
 ###########################################################################
 ###########################################################################
 ##                                                                       ##
-## Copyright 2018, Simon Andrews    (simon.andrews@babraham.ac.uk)       ##
+## Copyright 2019, Simon Andrews    (simon.andrews@babraham.ac.uk)       ##
 ##                 Steven Wingett   (steven.wingett@babraham.ac.uk)      ##
 ##                 Felix Krueger    (felix.krueger@babraham.ac.uk)       ##
 ##                 Mark Fiers       (Plant & Food Research, NZ)          ##
@@ -68,6 +68,7 @@ my $skip = 0;    #Specified via $top variable
 my $pass;
 my $inverse;
 my $get_genomes;
+my $add_genome;
 
 my $config_result = GetOptions(
     "subset=i"    => \$subset_count,
@@ -92,6 +93,7 @@ my $config_result = GetOptions(
 	"pass=i"	  => \$pass,
 	"inverse"     => \$inverse,
 	"get_genomes" => \$get_genomes,
+    "add_genome=s" => \$add_genome,
 );
 
 die "Could not parse options, please adjust configuration.\n" unless ($config_result);
@@ -105,6 +107,38 @@ if ($version) {
     print "FastQ Screen v$VERSION\n";
     exit(0);
 }
+
+if(defined $add_genome){   #Add a genome to the configuration file
+    
+    my @terms_to_add = split(/,/, $add_genome);
+
+    unless(scalar @terms_to_add == 3 ){    #Check three entries passed
+        warn "Add 3 terms to --add_genome as a comma separated list:\n";
+        die "'Database name','Genome path and basename','Notes'\n";
+    }
+    
+    unless(-e "$RealBin/fastq_screen.conf"){
+        warn "File 'fastq_screen.conf not found in '$RealBin'\n";
+        die "Please add this file and try again.\n";
+    }
+
+    unless(-w "$RealBin/fastq_screen.conf"){
+        warn "File '$RealBin/fastq_screen.conf' is not writable\n";
+        die "Please change file permissions and try again.\n";
+    }
+
+    #Edit input to conform to fastq_screen.conf file structure
+    $terms_to_add[0] = "DATABASE\t$terms_to_add[0]";
+    $terms_to_add[2] = '#' . $terms_to_add[2];
+
+    my $string_for_file = "\n$terms_to_add[2]\n$terms_to_add[0]\t$terms_to_add[1]\n";
+    my $command = "echo '$string_for_file' >> $RealBin/fastq_screen.conf";
+    !system($command) or die "Could not edit '$RealBin/fastq_screen.conf'\n";
+
+    print "Added genome $terms_to_add[0] to '$RealBin/fastq_screen.conf\n'";
+    exit(0);
+}
+
 
 if ( defined $outdir ) {
     unless ( -d $outdir ) {
@@ -2464,6 +2498,11 @@ Function
 
 Options
 
+ --add_genome <text>  Edits the file 'fastq_screen.conf' (in the folder where
+                      this script is saved) to add a new genome. Specify the 
+                      additional genome as a comma separated list:
+                      'Database name','Genome path and basename','Notes'
+
  --aligner <func>     Specify the aligner to use for the mapping. Valid 
                       arguments are 'bowtie', bowtie2' (default) or 'bwa'.  
                       Bowtie maps with parameters -k 2, Bowtie 2 with 
@@ -2623,4 +2662,4 @@ Options
 
 --version             Print the program version and exit.
 
-2018 Babraham Institute, Cambridge, UK 
+2019 Babraham Institute, Cambridge, UK 
