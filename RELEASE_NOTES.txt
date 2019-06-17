@@ -1,3 +1,11 @@
+Release notes for FastQ Screen v0.14.0 (17 June 2019)
+----------------------------------------------------------
+New --add_genome option.
+
+Fixed bug causing FastQ Screen to run when aligner not present.
+
+
+
 Release notes for FastQ Screen v0.13.0 (12 September 2018)
 ----------------------------------------------------------
 Added --get_genomes option.
