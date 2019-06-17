@@ -220,6 +220,8 @@ While it is not possible to cover every scenario, as a general rule using FastQ 
 
 FastQ Screen Options Summary
 ============================
+ **add_genome \<text\> :**  Edits the file 'fastq_screen.conf' (in the folder where this script is saved) to add a new genome. Specify the additional genome as a comma separated list: 'Database name','Genome path and basename','Notes'
+
 **aligner \<func\> :**  Specify the aligner to use for the mapping. Valid arguments are 'bowtie', bowtie2' (default) or 'bwa'.  Bowtie maps with parameters -k 2, Bowtie 2 with parameters -k 2 --very-fast-local and BWA with mem -a.  Local aligners such as BWA or Bowtie2 will be better at detecting the origin of chimeric reads.
 
 **bisulfite :**  Process bisulfite libraries. Bismark runs in non-directional mode. The path to the bisulfite aligner (Bismark) may be specified in the configuration file. Either conventional or bisulfite libraries may be processed, but not both simultaneously.  The --bisulfite option cannot be used in conjunction with --bwa.
@@ -288,9 +290,31 @@ Terms of use
 FastQ Screen is distributed under a "GNU General Public License", a copy of which is distributed with the software.
 
 
+Papers citing FastQ Screen
+==========================
+Picornell AC, Echavarria I, Alvarez E, et al.: Breast cancer PAM50 signature: correlation and concordance between RNA-Seq and digital multiplexed gene expression technologies in a triple negative breast cancer series. BMC Genomics. 2019; DOI: 10.1186/s12864-019-5849-0
+
+Laufer BI, Hwang H, Vogel Ciernia A et al., Whole genome bisulfite sequencing of Down syndrome brain reveals regional DNA hypermethylation and novel disorder insights. Epigenetics. 2019; 14(7), 672-684; DOI:10.1080/15592294.2019.1609867
+
+Chana-Muñoz A, Jendroszek Agnieszka Sønnichsen M, et al.: Origin and diversification of the plasminogen activation system among chordates. BMC evolutionary biology 2019; 19(1); DOI:10.1186/s12862-019-1353-z
+
+Dawidowska M, Jaksik Roman, Szarzyńska-Zawadzka B, el al.: Comprehensive Investigation of miRNome Identifies Novel Candidate miRNA-mRNA Interactions Implicated in T-Cell Acute Lymphoblastic Leukemia. Neoplasia. 2019; 21(3), 294—310; DOI:10.1016/j.neo.2019.01.004
+
+Woodham EF, Paul NR, Tyrrell B, et al.: Coordination by Cdc42 of Actin, Contractility, and Adhesion for Melanoblast Movement in Mouse Skin. Curr Biol. 2017; 27(5): 624–637
+
+Perrin S, Firmo C, Lemoine S, et al.: Aozan: an automated post-sequencing data-processing pipeline. Bioinformatics. 2017; 33(14): 2212–2213.
+
+O'Sullivan NJ, Teasdale MD, Mattiangeli V, et al.: A whole mitochondria analysis of the Tyrolean Iceman's leather provides insights into the animal sources of Copper Age clothing. Sci Rep. 2016; 6: 31279.
+
+Ewels P, Magnusson M, Lundin S, et al.: MultiQC: summarize analysis results for multiple tools and samples in a single report. Bioinformatics. 2016; 32(19): 3047–3048.
+
+Fiddyment S, Holsinger B, Ruzzier C, et al.: Animal origin of 13th-century uterine vellum revealed using noninvasive peptide fingerprinting. Proc Natl Acad Sci U S A. 2015; 112(49): 15066–15071. 
+
+Rose G, Wooldridge DJ, Anscombe C, et al.: Challenges of the Unknown: Clinical Application of Microbial Metagenomics. Int J Genomics. 2015; 2015: 292950.
+
+
 How to cite FastQ Screen
 ========================
-
 FastQ Screen was published in the open access journal F1000Research. 
 
 Wingett SW and Andrews S. FastQ Screen: A tool for multi-genome mapping and quality control [version 2; referees: 4 approved]. F1000Research 2018, 7:1338
@@ -301,4 +325,4 @@ Report problems
 ===============
 If you have any problems running this program you can report them on `GitHub <https://github.com/StevenWingett/FastQ-Screen/issues>`_.
 
-Or you can email them to: steven.wingett@babraham.ac.uk
+Please email any other queries to: steven.wingett@babraham.ac.uk
