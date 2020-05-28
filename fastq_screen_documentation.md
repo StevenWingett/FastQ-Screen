@@ -256,7 +256,7 @@ When --filter is used in conjunction with --tag, FASTQ files shall be mapped, ta
 				
 **force :**  Do not terminate if output files already exist, instead overwrite the files.
 
-**get_genomes :**  Download pre-indexed Bowtie2 genomes for a range of commonly studied species and sequences.
+**get_genomes :**  Download pre-indexed Bowtie2 genomes for a range of commonly studied species and sequences. If used with --bisulfite, Bismark bisulfite Bowtie2 indices will be downloaded instead.
 
 **help :**  Print program help and exit.
 

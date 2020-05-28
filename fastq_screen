@@ -13,12 +13,12 @@ use File::Path;
 use Data::Dumper;
 
 
-our $VERSION = "0.14.0";
+our $VERSION = "0.14.1.dev";
 
 ###########################################################################
 ###########################################################################
 ##                                                                       ##
-## Copyright 2019, Simon Andrews    (simon.andrews@babraham.ac.uk)       ##
+## Copyright 2020, Simon Andrews    (simon.andrews@babraham.ac.uk)       ##
 ##                 Steven Wingett   (steven.wingett@babraham.ac.uk)      ##
 ##                 Felix Krueger    (felix.krueger@babraham.ac.uk)       ##
 ##                 Mark Fiers       (Plant & Food Research, NZ)          ##
