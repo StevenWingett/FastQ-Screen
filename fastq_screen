@@ -54,6 +54,7 @@ my $threads;
 my $conf;
 my $bowtie_opts;
 my $bowtie2_opts;
+my $bismark_opts;
 my $bwa_opts;
 my $nohits;
 my $zip_data_output = 0;
@@ -80,6 +81,7 @@ my $config_result = GetOptions(
     "conf=s"      => \$conf,
     "bowtie=s"    => \$bowtie_opts,
     "bowtie2=s"   => \$bowtie2_opts,
+    "bismark=s"   => \$bismark_opts,
     "bwa=s"       => \$bwa_opts,
     "threads=i"   => \$threads,
     "nohits"      => \$nohits,
@@ -191,7 +193,7 @@ if(defined $inverse){
 	$inverse = 0;    #Set to 0 for later usage
 }
 
-if ( defined $aligner ) {
+if (defined $aligner) {
     $aligner = lc $aligner;
     if ( ( $aligner ne 'bowtie' ) and ( $aligner ne 'bowtie2' ) and ($aligner ne 'bwa'))  {
         die "Valid options for --aligner are 'bowtie', 'bowtie2' or 'bwa' only.\n";
@@ -210,9 +212,14 @@ if ( defined $aligner ) {
     }
 }
 
-$bowtie_opts  = '' unless ($bowtie_opts);     # Get undef warnings otherwise
-$bowtie2_opts = '' unless ($bowtie2_opts);
-$bwa_opts = '' unless ($bwa_opts);
+if( (defined $bismark_opts) and (!defined $bisulfite) ){
+	die "Option --bismark may not be specified without --bisulfite\n";
+}
+
+$bowtie_opts  = '' unless (defined $bowtie_opts);     # Get undef warnings otherwise
+$bowtie2_opts = '' unless (defined $bowtie2_opts);
+$bwa_opts = '' unless (defined $bwa_opts);
+$bismark_opts = '' unless (defined $bismark_opts);
 
 # Configuration
 my $number_of_threads = 1;
@@ -1116,7 +1123,7 @@ sub bisulfite_mapping {
 			$path_to_aligner_command = join('/', @elements) . '/';
 			$path_to_aligner_command = '--path_to_bowtie ' . $path_to_aligner_command;
 		}	
-        $bismark_command = "$path_to_bismark $sam_output_option $path_to_aligner_command --ambiguous --bowtie1 $bowtie_opts $illumina_flag --non_directional --prefix $prefix --output_dir $outdir $library->[1] $file 1>/dev/null 2>$error_filename";
+        $bismark_command = "$path_to_bismark $sam_output_option $path_to_aligner_command $bismark_opts --ambiguous --bowtie1 $bowtie_opts $illumina_flag --non_directional --prefix $prefix --output_dir $outdir $library->[1] $file 1>/dev/null 2>$error_filename";
     } else {    #Using Bowtie2
 
 	if($path_to_bowtie2 ne 'bowtie2'){
@@ -1126,7 +1133,7 @@ sub bisulfite_mapping {
 			$path_to_aligner_command = join('/', @elements) . '/';
 			$path_to_aligner_command = '--path_to_bowtie ' . $path_to_aligner_command;   #Bismark uses --path_to_bowtie for Bowtie1 and Bowtie2
 		}	
-		$bismark_command = "$path_to_bismark $sam_output_option $path_to_aligner_command --ambiguous --bowtie2 $bowtie2_opts $illumina_flag --non_directional --prefix $prefix --output_dir $outdir $library->[1] $file 1>/dev/null 2>$error_filename";
+		$bismark_command = "$path_to_bismark $sam_output_option $path_to_aligner_command $bismark_opts --ambiguous --bowtie2 $bowtie2_opts $illumina_flag --non_directional --prefix $prefix --output_dir $outdir $library->[1] $file 1>/dev/null 2>$error_filename";
     }
 
     !system($bismark_command) or die "Could not run Bismark with command: '$bismark_command'.\n";
@@ -2518,9 +2525,14 @@ Options
                       --bisulfite option cannot be used in conjunction with 
                       --bwa.
 
+ --bismark <text>     Specify extra parameters to be passed to Bismark. 
+                      These parameters should be quoted to clearly 
+                      delimit Bismark parameters from FastQ Screen 
+                      parameters.                      
+
  --bowtie <text>      Specify extra parameters to be passed to Bowtie. 
                       These parameters should be quoted to clearly 
-                      delimit bowtie parameters from fastq_screen 
+                      delimit bowtie parameters from FastQ Screen 
                       parameters. You should not try to use this option 
                       to override the normal search or reporting options 
                       for bowtie which are set automatically but it might 
@@ -2662,4 +2674,4 @@ Options
 
 --version             Print the program version and exit.
 
-2019 Babraham Institute, Cambridge, UK 
+2020 Babraham Institute, Cambridge, UK 
