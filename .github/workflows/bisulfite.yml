@@ -42,12 +42,12 @@ jobs:
         wget https://github.coqqm/FelixKrueger/Bismark/archive/0.22.3.tar.gz
         tar xvzf 0.22.3.tar.gz
         Bismark-0.22.3/bismark -h
-        
-        
-        
-        # $GITHUB_WORKSPACE/fastq_screen --get_genomes --bisulfite
+        export PATH="~/Bismark-0.22.3:$PATH"
+        source ~/.bashrc
+              
+        $GITHUB_WORKSPACE/fastq_screen --get_genomes --bisulfite
         
     # Run FastQ Screen
     - name: Run FastQ Screen
       run: |
-        $GITHUB_WORKSPACE/fastq_screen --conf ./FastQ_Screen_Genomes/fastq_screen.conf *.fastq.gz
+        $GITHUB_WORKSPACE/fastq_screen --conf ./FastQ_Screen_Genomes_Bisulfite/fastq_screen.conf --bisulfite *.fastq.gz
