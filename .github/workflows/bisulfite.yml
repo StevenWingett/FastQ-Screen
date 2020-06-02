@@ -1,6 +1,6 @@
 # This is a basic workflow to test Bisulfite is working
 
-name: CI
+name: Bisulfite
 
 # Controls when the action will run. Triggers the workflow on push or pull request
 # events but only for the master branch
@@ -34,15 +34,14 @@ jobs:
         sudo cpan App::cpanminus
         sudo cpanm GD::Graph
         
-        sudo apt install bismark
              
     # Download and extract useful files
     - name: Download files
       run: |
-        # wget https://www.bioinformatics.babraham.ac.uk/projects/bismark/test_data.fastq
-        # wget https://github.coqqm/FelixKrueger/Bismark/archive/0.22.3.tar.gz
-        # tar xvzf 0.22.3.tar.gz
-        bismark -h
+        wget https://www.bioinformatics.babraham.ac.uk/projects/bismark/test_data.fastq
+        wget https://github.coqqm/FelixKrueger/Bismark/archive/0.22.3.tar.gz
+        tar xvzf 0.22.3.tar.gz
+        Bismark-0.22.3/bismark -h
         
         
         
