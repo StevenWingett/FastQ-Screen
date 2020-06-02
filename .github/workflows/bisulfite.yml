@@ -41,7 +41,7 @@ jobs:
         wget https://www.bioinformatics.babraham.ac.uk/projects/bismark/test_data.fastq
         wget https://github.com/FelixKrueger/Bismark/archive/0.22.3.tar.gz
         tar xvzf 0.22.3.tar.gz
-        Bismark-0.22.3/bismark -h
+        Bismark-0.22.3/bismark --help
         export PATH="~/Bismark-0.22.3:$PATH"
         source ~/.bashrc
               
