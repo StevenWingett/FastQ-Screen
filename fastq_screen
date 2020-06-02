@@ -1133,7 +1133,7 @@ sub bisulfite_mapping {
 			$path_to_aligner_command = join('/', @elements) . '/';
 			$path_to_aligner_command = '--path_to_bowtie ' . $path_to_aligner_command;   #Bismark uses --path_to_bowtie for Bowtie1 and Bowtie2
 		}	
-		$bismark_command = "$path_to_bismark $sam_output_option $path_to_aligner_command $bismark_opts --ambiguous --bowtie2 $bowtie2_opts $illumina_flag --non_directional --prefix $prefix --output_dir $outdir $library->[1] $file 1>/dev/null 2>$error_filename";
+		$bismark_command = "$path_to_bismark $sam_output_option $path_to_aligner_command --score_min L,0,-0.6 $bismark_opts --ambiguous --bowtie2 $bowtie2_opts $illumina_flag --non_directional --prefix $prefix --output_dir $outdir $library->[1] $file 1>/dev/null 2>$error_filename";
     }
 
     !system($bismark_command) or die "Could not run Bismark with command: '$bismark_command'.\n";
