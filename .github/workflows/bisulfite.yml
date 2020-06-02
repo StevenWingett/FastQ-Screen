@@ -39,7 +39,7 @@ jobs:
     - name: Download files
       run: |
         wget https://www.bioinformatics.babraham.ac.uk/projects/bismark/test_data.fastq
-        wget https://github.coqqm/FelixKrueger/Bismark/archive/0.22.3.tar.gz
+        wget https://github.com/FelixKrueger/Bismark/archive/0.22.3.tar.gz
         tar xvzf 0.22.3.tar.gz
         Bismark-0.22.3/bismark -h
         export PATH="~/Bismark-0.22.3:$PATH"
