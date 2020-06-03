@@ -176,6 +176,8 @@ Adjust the filter options as required:
 
 The --pass command allows the user to specify how many filters need to be passed for a read to be written to the output file.  By default, all the filters should be passed.  Consequently the example above will remove reads that map uniquely to any of the genomes.
 
+Another useful option is --inverse.  This option inverts the --filter results i.e. reads that pass the --filter parameter will not pass when --filter --inverse are specified together, and vice versa.
+
 It is also possible to extract reads mapping to none of the reference genomes with the option --nohits:
 
 ``fastq_screen --nohits sample7.fastq``
@@ -226,7 +228,9 @@ FastQ Screen Options Summary
 
 **bisulfite :**  Process bisulfite libraries. Bismark runs in non-directional mode. The path to the bisulfite aligner (Bismark) may be specified in the configuration file. Either conventional or bisulfite libraries may be processed, but not both simultaneously.  The --bisulfite option cannot be used in conjunction with --bwa.
 
-**bowtie \<text\> :**  Specify extra parameters to be passed to Bowtie. These parameters should be quoted to clearly delimit bowtie parameters from fastq_screen parameters. You should not try to use this option to override the normal search or reporting options for bowtie which are set automatically but it might be useful to allow reads to be trimmed before alignment etc.
+**bismark \<text\> :**  Specify extra parameters to be passed to Bismark. These parameters should be quoted to clearly delimit Bismark parameters from FastQ Screen parameters. 
+
+**bowtie \<text\> :**  Specify extra parameters to be passed to Bowtie. These parameters should be quoted to clearly delimit bowtie parameters from FastQ Screen parameters. You should not try to use this option to override the normal search or reporting options for bowtie which are set automatically but it might be useful to allow reads to be trimmed before alignment etc.
 
 **bowtie2 \<text\> :**  Specify extra parameters to be passed to Bowtie 2. These parameters should be quoted to clearly delimit Bowtie 2 parameters from FastQ Screen parameters. You should not try to use this option to override the normal search or reporting options for bowtie which are set automatically but it might be useful to allow reads to be trimmed before alignment etc.  
 
@@ -256,7 +260,7 @@ When --filter is used in conjunction with --tag, FASTQ files shall be mapped, ta
 				
 **force :**  Do not terminate if output files already exist, instead overwrite the files.
 
-**get_genomes :**  Download pre-indexed Bowtie2 genomes for a range of commonly studied species and sequences.
+**get_genomes :**  Download pre-indexed Bowtie2 genomes for a range of commonly studied species and sequences. If used with --bisulfite, Bismark bisulfite Bowtie2 indices will be downloaded instead.
 
 **help :**  Print program help and exit.
 

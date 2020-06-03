@@ -1,4 +1,4 @@
-# This is a basic workflow to help you get started with Actions
+# This is a basic workflow to test FastQ Screen is working
 
 name: CI
 
@@ -27,7 +27,31 @@ jobs:
       run: echo Hello, world!
 
     # Runs a set of commands using the runners shell
-    - name: Run a multi-line script
+    - name: Install dependencies
       run: |
-        echo Add other actions to build,
-        echo test, and deploy your project.
+        sudo apt install bowtie2
+        sudo apt-get install libgd-perl
+        sudo cpan App::cpanminus
+        sudo cpanm GD::Graph
+             
+    # Download and extract useful files
+    - name: Download files
+      run: |
+        wget https://www.bioinformatics.babraham.ac.uk/projects/fastq_screen/fastq_screen_test_dataset.tar.gz
+        tar xvzf fastq_screen_test_dataset.tar.gz
+        ln -s fastq_screen_test_dataset/*.fastq.gz .
+        $GITHUB_WORKSPACE/fastq_screen --get_genomes
+        
+    # Run FastQ Screen
+    - name: Run FastQ Screen
+      run: |
+        $GITHUB_WORKSPACE/fastq_screen --conf ./FastQ_Screen_Genomes/fastq_screen.conf *.fastq.gz
+           
+    #Check Bisulfite mode
+    - name: Check Bisulphite mode
+      run: |
+        wget https://www.bioinformatics.babraham.ac.uk/projects/fastq_screen/fastq_screen_test_dataset.tar.gz
+        tar xvzf fastq_screen_test_dataset.tar.gz
+        ln -s fastq_screen_test_dataset/*.fastq.gz .
+        # $GITHUB_WORKSPACE/fastq_screen --get_genomes.  #Too large to download (or 3h timeout?), may have to work on a solution
+        # $GITHUB_WORKSPACE/fastq_screen --conf ./FastQ_Screen_Genomes_Bisulfite/fastq_screen.conf --bisulfite *.fastq.gz

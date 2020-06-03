@@ -1,3 +1,14 @@
+Release notes for FastQ Screen v0.14.1 (03 June 2020)
+----------------------------------------------------------
+Added --score_min L,0,-0.6 as a Bismark/Bowtie2 mapping 
+parameter to make FastQ Screen perform less stringent 
+mapping, which is more consistent with non-bisulfite
+FastQ Screen mapping.
+
+Added a GitHUb Actions YAML file for testing FastQ Screen.
+
+
+
 Release notes for FastQ Screen v0.14.0 (17 June 2019)
 ----------------------------------------------------------
 New --add_genome option.
