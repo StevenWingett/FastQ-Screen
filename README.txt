@@ -8,8 +8,15 @@ sequencing pipelines but may also have uses in metagenomics
 studies where mixed samples are expected.
 
 The FastQ Screen Homepage is found at:
-http://www.bioinformatics.babraham.ac.uk/projects/fastq_screen
+https://www.bioinformatics.babraham.ac.uk/projects/fastq_screen
 
-Full documentation on using the software is provided in the
-PDF file 'fastq_screen_documentation.pdf' and the markdown file
-'fastq_screen_documentation.md' distributed with the program.
+Full documentation on using the software is provided at:
+https://www.bioinformatics.babraham.ac.uk/projects/fastq_screen/_build/html/index.html
+
+The codebase is maintained at:
+https://github.com/StevenWingett/FastQ-Screen
+
+Bug reports, queries or suggestions can be made at:
+https://github.com/StevenWingett/FastQ-Screen/issues
+
+Alternatively, please email steven.wingett@babraham.ac.uk
