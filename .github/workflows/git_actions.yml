@@ -53,5 +53,5 @@ jobs:
         wget https://www.bioinformatics.babraham.ac.uk/projects/fastq_screen/fastq_screen_test_dataset.tar.gz
         tar xvzf fastq_screen_test_dataset.tar.gz
         ln -s fastq_screen_test_dataset/*.fastq.gz .
-        # $GITHUB_WORKSPACE/fastq_screen --get_genomes.  #Too large to download, may have to work on a solution
+        # $GITHUB_WORKSPACE/fastq_screen --get_genomes.  #Too large to download (or 3h timeout?), may have to work on a solution
         # $GITHUB_WORKSPACE/fastq_screen --conf ./FastQ_Screen_Genomes_Bisulfite/fastq_screen.conf --bisulfite *.fastq.gz
