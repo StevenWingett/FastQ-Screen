@@ -50,8 +50,16 @@ jobs:
     #Check Bisulfite mode
     - name: Check Bisulphite mode
       run: |
-        wget https://www.bioinformatics.babraham.ac.uk/projects/fastq_screen/fastq_screen_test_dataset.tar.gz
-        tar xvzf fastq_screen_test_dataset.tar.gz
-        ln -s fastq_screen_test_dataset/*.fastq.gz .
-        # $GITHUB_WORKSPACE/fastq_screen --get_genomes.  #Too large to download (or 3h timeout?), may have to work on a solution
-        # $GITHUB_WORKSPACE/fastq_screen --conf ./FastQ_Screen_Genomes_Bisulfite/fastq_screen.conf --bisulfite *.fastq.gz
+        wget https://www.bioinformatics.babraham.ac.uk/projects/bismark/test_data.fastq
+        wget https://github.com/FelixKrueger/Bismark/archive/0.22.3.tar.gz
+        tar xvzf 0.22.3.tar.gz
+        Bismark-0.22.3/bismark --help
+        export PATH="~/Bismark-0.22.3:$PATH"
+        source ~/.bashrc
+              
+       # $GITHUB_WORKSPACE/fastq_screen --get_genomes --bisulfite  #Took too much memory or too long (perhaps use fewer genomes)
+        
+    # Run FastQ Screen
+    - name: Run FastQ Screen
+      run: |
+        #$GITHUB_WORKSPACE/fastq_screen --conf ./FastQ_Screen_Genomes_Bisulfite/fastq_screen.conf --bisulfite *.fastq.gz
