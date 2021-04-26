@@ -31,7 +31,7 @@ To assist your understanding of FastQ Screen and how it should be used, we have 
 
 Project Homepage
 ================
-The FastQ Screen Homepage can be found `here <http://www.bioinformatics.babraham.ac.uk/projects/fastq_screen">`_
+The FastQ Screen Homepage can be found `here <http://www.bioinformatics.babraham.ac.uk/projects/fastq_screen>`_
 
 
 Download
@@ -111,9 +111,10 @@ Alternatively, pre-built Bowtie2 indices of commonly used genomes may be downloa
 The genome indices will be downloaded to a folder named "FastQ_Screen_Genomes" in your current working directory (or to another location if --outdir is specified).   In addition to the genome indices, the folder FastQ_Screen_Genomes will contain a configuration file named "fastq_screen.conf", which is ready to use and lists the correct paths to the newly downloaded reference genomes.  This configuration file can be passed to fastq_screen with the --conf command, or may be used as the default configuration by copying the file to the folder containing the fastq_screen script.
 
 
+
 Test Dataset
 ============
-To confirm FastQ Screen functions correctly on your system please download the Test Dataset. The file 'fastq\_screen\_test\_dataset.fastq.gz' contains reads in Sanger FASTQ format. 
+To confirm FastQ Screen functions correctly on your system please download the `Test Dataset <https://www.bioinformatics.babraham.ac.uk/projects/fastq_screen/fastq_screen_test_dataset.tar.gz.>`_ The file 'fastq\_screen\_test\_dataset.fastq.gz' contains reads in Sanger FASTQ format. 
 
 1. Extract the tar archive before processing:
 ``tar xvzf fastq_screen_test_dataset.tar.gz``
