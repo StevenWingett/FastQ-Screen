@@ -56,31 +56,24 @@ Before running FastQ Screen there are a few prerequisites that will need to be i
 
 1. A sequence aligner.  FastQ Screen is compatible with `Bowtie <http://bowtie-bio.sourceforge.net>`_, `Bowtie2 <http://bowtie-bio.sourceforge.net>`_ or `BWA <http://bio-bwa.sourceforge.net>`_. It's easier if you put the chosen aligner in your path, but if not you can configure its location in the config file.
 
-2. We recommend running FastQ Screen in a Linux system, on which the programming language Perl should already be installed. Perl should also be pre-installed on OSX systems, or if trying to run FastQ Screen on a Windows system you may obtain Perl from `ActiveState. <http://www.activestate.com/activeperl/downloads>`_
+2. We recommend running FastQ Screen in a Linux system, on which the programming language Perl should already be installed.
 
 3. GD::Graph FastQ Screen uses the GD::Graph module to draw PNG format graphs summarising the mapping results. FastQ Screen will still produce both text and HTML format summaries of the results if GD::Graph is not installed.  
 
- Windows ActivePerl users can install this using;
+You can use the built in CPAN shell to install
+this module:
 
-   ``ppm install GD-Graph``
+``perl -MCPAN -e "install GD"``
 
-   Other platforms can use the built in CPAN shell to install
-   this:
+Because GD graph uses GD this will be brought in as a dependency.  GD may be easier to install using a package manager on many linux distributions.  On Fedora for example you can install GD using:
 
-   ``perl -MCPAN -e "install GD"``
+``yum install perl-GD``
 
-   Because GD graph uses GD this will be brought in as a 
-   dependency.  GD may be easier to install using a package
-   manager on many linux distributions.  On Fedora for example
-   you can install GD using:
-
-   ``yum install perl-GD``
-
-   ..before doing the CPAN install of GD::Graph
+..before doing the CPAN install of GD::Graph
 
 Actually installing Fastq Screen is very simple. Download the tar.gz distribution file and then do:
 
-  ``tar -xzf fastq_screen_v0.x.x.tar.gz``
+``tar -xzf fastq_screen_v0.x.x.tar.gz``
 
 You will see a folder called fastq\_screen\_v0.x.x has been created and the program is inside that. You can add the program to your path either by linking the program into:
 ``usr/local/bin`` or by adding the program installation directory to your search path.
