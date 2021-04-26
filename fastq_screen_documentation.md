@@ -186,6 +186,8 @@ The option --nohits is equivalent to --tag --filter 0000 (zero for every genome 
 
 By adjusting the filters and, if necessary, undergoing several rounds of filtering it should be possible for a user to extract the desired reads.
 
+Filtering paired-end reads files separately will generate files with un-paired reads e.g. a read may be present in File1, but its corresponding pair may not be found in File2.  Also, the order of the reads in processed files may not correspond to on another.  Consequently, the resulting file pairs will need processing after filtering with FastQ Screen. `Several tools are available (although not currently produced by us) to achieve this re-pairing <https://jgi.doe.gov/data-and-tools/bbtools/bb-tools-user-guide/repair-guide>`_   
+
 A video tutorial explaining how to filter FASTQ files may be found `here <https://www.youtube.com/watch?v=eJcAv-Dt57I&t=1s_>`__ 
 
 
