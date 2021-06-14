@@ -90,7 +90,7 @@ Configuration
 =============
 In order to use FastQ Screen you will need to configure some genome databases for the program to search.  This will involve downloading the sequences for the databases in FASTA format and then using either Bowtie, Bowtie2 or BWA to build the relevant index files.  Please note: the aligner used to build the index files must be used to map the reads
 
-Once you have built your index you can configure the FastQ Screen program.  You do this by editing the fastq\_screen.conf.example file which is distributed with the program.  This shows an example set of database configurations which you will need to change to reflect the actual databases you have set up.  FastQ Screen can process up to a maximim of 32 reference genomes.  Rename the file to fastq\_screen.conf after you have finished editing.
+Once you have built your index you can configure the FastQ Screen program.  You do this by editing the fastq\_screen.conf.example file which is distributed with the program.  This shows an example set of database configurations which you will need to change to reflect the actual databases you have set up.  FastQ Screen can process up to a maximum of 32 reference genomes.  Rename the file to fastq\_screen.conf after you have finished editing.
 
 The other options you can set in the config file are the location of the aligner binary (if it's not in your path),and the number of threads you want to allocate to the aligner when performing your screen.  The number of threads will be the number of CPU cores the code will run on so you shouldn't set this value higher than the number of physical cores you have in your machine. The more threads you can allow the faster the searching part of the screen will run.
 
@@ -185,6 +185,8 @@ It is also possible to extract reads mapping to none of the reference genomes wi
 The option --nohits is equivalent to --tag --filter 0000 (zero for every genome screened).
 
 By adjusting the filters and, if necessary, undergoing several rounds of filtering it should be possible for a user to extract the desired reads.
+
+There may also may be occasions when, after filtering a FASTQ file, the tags need to be removed from the headers of each read.  This can be achieved using the script Misc/remove_tags.pl.
 
 A video tutorial explaining how to filter FASTQ files may be found `here <https://www.youtube.com/watch?v=eJcAv-Dt57I&t=1s_>`__ 
 
