@@ -294,25 +294,7 @@ FastQ Screen is distributed under a "GNU General Public License", a copy of whic
 
 Papers citing FastQ Screen
 ==========================
-Picornell AC, Echavarria I, Alvarez E, et al.: Breast cancer PAM50 signature: correlation and concordance between RNA-Seq and digital multiplexed gene expression technologies in a triple negative breast cancer series. BMC Genomics. 2019; DOI: 10.1186/s12864-019-5849-0
-
-Laufer BI, Hwang H, Vogel Ciernia A et al., Whole genome bisulfite sequencing of Down syndrome brain reveals regional DNA hypermethylation and novel disorder insights. Epigenetics. 2019; 14(7), 672-684; DOI:10.1080/15592294.2019.1609867
-
-Chana-Muñoz A, Jendroszek Agnieszka Sønnichsen M, et al.: Origin and diversification of the plasminogen activation system among chordates. BMC evolutionary biology 2019; 19(1); DOI:10.1186/s12862-019-1353-z
-
-Dawidowska M, Jaksik Roman, Szarzyńska-Zawadzka B, el al.: Comprehensive Investigation of miRNome Identifies Novel Candidate miRNA-mRNA Interactions Implicated in T-Cell Acute Lymphoblastic Leukemia. Neoplasia. 2019; 21(3), 294—310; DOI:10.1016/j.neo.2019.01.004
-
-Woodham EF, Paul NR, Tyrrell B, et al.: Coordination by Cdc42 of Actin, Contractility, and Adhesion for Melanoblast Movement in Mouse Skin. Curr Biol. 2017; 27(5): 624–637
-
-Perrin S, Firmo C, Lemoine S, et al.: Aozan: an automated post-sequencing data-processing pipeline. Bioinformatics. 2017; 33(14): 2212–2213.
-
-O'Sullivan NJ, Teasdale MD, Mattiangeli V, et al.: A whole mitochondria analysis of the Tyrolean Iceman's leather provides insights into the animal sources of Copper Age clothing. Sci Rep. 2016; 6: 31279.
-
-Ewels P, Magnusson M, Lundin S, et al.: MultiQC: summarize analysis results for multiple tools and samples in a single report. Bioinformatics. 2016; 32(19): 3047–3048.
-
-Fiddyment S, Holsinger B, Ruzzier C, et al.: Animal origin of 13th-century uterine vellum revealed using noninvasive peptide fingerprinting. Proc Natl Acad Sci U S A. 2015; 112(49): 15066–15071. 
-
-Rose G, Wooldridge DJ, Anscombe C, et al.: Challenges of the Unknown: Clinical Application of Microbial Metagenomics. Int J Genomics. 2015; 2015: 292950.
+`https://europepmc.org/search?query=CITES%3A30254741_MED <https://europepmc.org/search?query=CITES%3A30254741_MED>`_
 
 
 How to cite FastQ Screen
