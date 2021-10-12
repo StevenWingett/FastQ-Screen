@@ -2417,7 +2417,7 @@ sub get_genomes{
 	#script.  At present, the genomes are stored on Babraham FTP1 (valid for 1 year), but they should be moved
 	#to a permanent location on the webserver, when more space is made available.
 	my $location_file = 'www.bioinformatics.babraham.ac.uk/projects/fastq_screen/genome_locations.txt';
-	my $command = "wget $location_file";	
+	my $command = "wget --no-check-certificate $location_file";	
 	!system($command) or die "Could not run command '$command'\n";
 	$location_file = 'genome_locations.txt';
 	open(LOCATION, '<', $location_file) or die "Could not open '$location_file' : $!";
@@ -2428,7 +2428,7 @@ sub get_genomes{
 	unlink('genome_locations.txt');
 	
 	
-	$command = "wget -r --no-parent -R 'index.html*' $download_folder" ;
+	$command = "wget --no-check-certificate -r --no-parent -R 'index.html*' $download_folder" ;
 	!system($command) or die "Could not run command '$command'\n";
 	$command = "mv $download_folder " . $outdir;
 	!system($command) or die "Could not run command '$command'\n";
