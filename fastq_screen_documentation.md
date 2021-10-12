@@ -31,7 +31,7 @@ To assist your understanding of FastQ Screen and how it should be used, we have 
 
 Project Homepage
 ================
-The FastQ Screen Homepage can be found `here <http://www.bioinformatics.babraham.ac.uk/projects/fastq_screen">`_
+The FastQ Screen Homepage can be found `here <http://www.bioinformatics.babraham.ac.uk/projects/fastq_screen>`_
 
 
 Download
@@ -56,31 +56,24 @@ Before running FastQ Screen there are a few prerequisites that will need to be i
 
 1. A sequence aligner.  FastQ Screen is compatible with `Bowtie <http://bowtie-bio.sourceforge.net>`_, `Bowtie2 <http://bowtie-bio.sourceforge.net>`_ or `BWA <http://bio-bwa.sourceforge.net>`_. It's easier if you put the chosen aligner in your path, but if not you can configure its location in the config file.
 
-2. We recommend running FastQ Screen in a Linux system, on which the programming language Perl should already be installed. Perl should also be pre-installed on OSX systems, or if trying to run FastQ Screen on a Windows system you may obtain Perl from `ActiveState. <http://www.activestate.com/activeperl/downloads>`_
+2. We recommend running FastQ Screen in a Linux system, on which the programming language Perl should already be installed.
 
 3. GD::Graph FastQ Screen uses the GD::Graph module to draw PNG format graphs summarising the mapping results. FastQ Screen will still produce both text and HTML format summaries of the results if GD::Graph is not installed.  
 
- Windows ActivePerl users can install this using;
+You can use the built in CPAN shell to install
+this module:
 
-   ``ppm install GD-Graph``
+``perl -MCPAN -e "install GD"``
 
-   Other platforms can use the built in CPAN shell to install
-   this:
+Because GD graph uses GD this will be brought in as a dependency.  GD may be easier to install using a package manager on many linux distributions.  On Fedora for example you can install GD using:
 
-   ``perl -MCPAN -e "install GD"``
+``yum install perl-GD``
 
-   Because GD graph uses GD this will be brought in as a 
-   dependency.  GD may be easier to install using a package
-   manager on many linux distributions.  On Fedora for example
-   you can install GD using:
-
-   ``yum install perl-GD``
-
-   ..before doing the CPAN install of GD::Graph
+..before doing the CPAN install of GD::Graph
 
 Actually installing Fastq Screen is very simple. Download the tar.gz distribution file and then do:
 
-  ``tar -xzf fastq_screen_v0.x.x.tar.gz``
+``tar -xzf fastq_screen_v0.x.x.tar.gz``
 
 You will see a folder called fastq\_screen\_v0.x.x has been created and the program is inside that. You can add the program to your path either by linking the program into:
 ``usr/local/bin`` or by adding the program installation directory to your search path.
@@ -118,9 +111,10 @@ Alternatively, pre-built Bowtie2 indices of commonly used genomes may be downloa
 The genome indices will be downloaded to a folder named "FastQ_Screen_Genomes" in your current working directory (or to another location if --outdir is specified).   In addition to the genome indices, the folder FastQ_Screen_Genomes will contain a configuration file named "fastq_screen.conf", which is ready to use and lists the correct paths to the newly downloaded reference genomes.  This configuration file can be passed to fastq_screen with the --conf command, or may be used as the default configuration by copying the file to the folder containing the fastq_screen script.
 
 
+
 Test Dataset
 ============
-To confirm FastQ Screen functions correctly on your system please download the Test Dataset. The file 'fastq\_screen\_test\_dataset.fastq.gz' contains reads in Sanger FASTQ format. 
+To confirm FastQ Screen functions correctly on your system please download the `Test Dataset <https://www.bioinformatics.babraham.ac.uk/projects/fastq_screen/fastq_screen_test_dataset.tar.gz.>`_ The file 'fastq\_screen\_test\_dataset.fastq.gz' contains reads in Sanger FASTQ format. 
 
 1. Extract the tar archive before processing:
 ``tar xvzf fastq_screen_test_dataset.tar.gz``
@@ -185,6 +179,8 @@ It is also possible to extract reads mapping to none of the reference genomes wi
 The option --nohits is equivalent to --tag --filter 0000 (zero for every genome screened).
 
 By adjusting the filters and, if necessary, undergoing several rounds of filtering it should be possible for a user to extract the desired reads.
+
+Filtering paired-end reads files separately will generate files with un-paired reads e.g. a read may be present in File1, but its corresponding pair may not be found in File2.  Also, the order of the reads in processed files may not correspond to on another.  Consequently, the resulting file pairs will need processing after filtering with FastQ Screen. `Several tools are available (although not currently produced by us) to achieve this re-pairing <https://jgi.doe.gov/data-and-tools/bbtools/bb-tools-user-guide/repair-guide>`_   
 
 There may also may be occasions when, after filtering a FASTQ file, the tags need to be removed from the headers of each read.  This can be achieved using the script Misc/remove_tags.pl.
 
