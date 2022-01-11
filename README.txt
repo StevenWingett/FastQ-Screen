@@ -18,5 +18,3 @@ https://github.com/StevenWingett/FastQ-Screen
 
 Bug reports, queries or suggestions can be made at:
 https://github.com/StevenWingett/FastQ-Screen/issues
-
-Alternatively, please email steven.wingett@babraham.ac.uk

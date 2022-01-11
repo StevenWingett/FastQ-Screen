@@ -292,8 +292,8 @@ Terms of use
 FastQ Screen is distributed under a "GNU General Public License", a copy of which is distributed with the software.
 
 
-Papers citing FastQ Screen
-==========================
+Selected Papers citing FastQ Screen
+===================================
 Picornell AC, Echavarria I, Alvarez E, et al.: Breast cancer PAM50 signature: correlation and concordance between RNA-Seq and digital multiplexed gene expression technologies in a triple negative breast cancer series. BMC Genomics. 2019; DOI: 10.1186/s12864-019-5849-0
 
 Laufer BI, Hwang H, Vogel Ciernia A et al., Whole genome bisulfite sequencing of Down syndrome brain reveals regional DNA hypermethylation and novel disorder insights. Epigenetics. 2019; 14(7), 672-684; DOI:10.1080/15592294.2019.1609867
@@ -326,5 +326,3 @@ Wingett SW and Andrews S. FastQ Screen: A tool for multi-genome mapping and qual
 Report problems
 ===============
 If you have any problems running this program you can report them on `GitHub <https://github.com/StevenWingett/FastQ-Screen/issues>`_.
-
-Please email any other queries to: steven.wingett@babraham.ac.uk

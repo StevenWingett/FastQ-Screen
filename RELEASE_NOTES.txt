@@ -1,12 +1,6 @@
-Release notes for FastQ Screen v0.15.0 (12 October 2021)
-----------------------------------------------------------
-Added remove_tags.pl in new Misc folder. This script
-removes FastQ Screen genome filter tags from read headers, 
-which may be necessary for downstream analysis.
-
-Downloading test genomes with wget now executed with 
---no-check-certificate parameter, to prevent downloading 
-failures on some systems.  
+Release notes for FastQ Screen v0.15.1 (11 January 2022)
+--------------------------------------------------------
+Updated contact details. 
 
 
 

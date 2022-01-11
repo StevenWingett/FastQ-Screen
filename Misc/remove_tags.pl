@@ -10,9 +10,9 @@ use Data::Dumper;
 ###########################################################################
 ###########################################################################
 ##                                                                       ##
-## Copyright 2021, Simon Andrews    (simon.andrews@babraham.ac.uk)       ##
-##                 Steven Wingett   (steven.wingett@babraham.ac.uk)      ##
-##                 Felix Krueger    (felix.krueger@babraham.ac.uk)       ##
+## Copyright 2022, Simon Andrews    (The Babraham Institute, UK)         ##
+##                 Steven Wingett   (MRC-LMB, Cambridge, UK)             ##
+##                 Felix Krueger    (The Babraham Institute UK)          ##
 ##                 Mark Fiers       (Plant & Food Research, NZ)          ##
 ##                                                                       ##
 ## This program is free software: you can redistribute it and/or modify  ##
