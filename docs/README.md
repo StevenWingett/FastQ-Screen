@@ -1,4 +1,4 @@
-<img src="../FastQ_Screen_Logo.png" alt="drawing" width="300"/>
+<img src="https://github.com/StevenWingett/FastQ-Screen/blob/master/FastQ_Screen_Logo.png" alt="drawing" width="300"/>
 
 
 Introduction
