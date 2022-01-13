@@ -2,3 +2,5 @@ remote_theme: carlosperate/jekyll-theme-rtd
 
 github:
   is_project_page: false
+
+theme: jekyll-theme-modernist
