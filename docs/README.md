@@ -18,6 +18,17 @@ In contrast, poor sequencing results will include results from one or more unexp
 
 ![Poor Sequencing Results](http://www.bioinformatics.babraham.ac.uk/projects/fastq_screen/bad_sequence_screen.png)
 
+
+Publication and how to cite FastQ Screen
+========================================
+[FastQ Screen was published in the open access journal F1000Research.](https://doi.org/10.12688/f1000research.15931.2) 
+
+FastQ Screen should be cited as follows:
+
+Wingett SW and Andrews S. FastQ Screen: A tool for multi-genome mapping and quality control [version 2; referees: 4 approved]. F1000Research 2018, 7:1338
+(https://doi.org/10.12688/f1000research.15931.2)
+
+
 FastQ Screen online tutorials
 =============================
 To assist your understanding of FastQ Screen and how it should be used, we have prepared a series of short training videos.
@@ -324,14 +335,6 @@ Selected Papers citing FastQ Screen
 - Rose G, Wooldridge DJ, Anscombe C, et al.: Challenges of the Unknown: Clinical Application of Microbial Metagenomics. Int J Genomics. 2015; 2015: 292950.
 
 
-How to cite FastQ Screen
-========================
-FastQ Screen was published in the open access journal F1000Research. 
-
-Wingett SW and Andrews S. FastQ Screen: A tool for multi-genome mapping and quality control [version 2; referees: 4 approved]. F1000Research 2018, 7:1338
-(https://doi.org/10.12688/f1000research.15931.2)
-
-
-Report problems
+Feedback
 ===============
-If you have any problems running this program you can report them on [GitHub.](https://github.com/StevenWingett/FastQ-Screen/issues)
+Bug reports, queries or suggestions can be made via the [FastQ Screen GitHub page.](https://github.com/StevenWingett/FastQ-Screen/issues)
