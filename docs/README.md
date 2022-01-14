@@ -1,5 +1,7 @@
 <img src="https://raw.githubusercontent.com/StevenWingett/FastQ-Screen/master/FastQ_Screen_Logo.png" alt="drawing" width="200"/>
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5838377.svg)](https://doi.org/10.5281/zenodo.5838377)
+
 Introduction
 ============
 FastQ Screen is a simple application which allows you to search a large sequence dataset against a panel of different genomes to determine from where the sequences in your data originate. It was built as a QC check for sequencing pipelines but may also be useful to characterise metagenomic samples.  When running a sequencing pipeline it is useful to know that your sequencing runs contain the types of sequence they're supposed to.  Your search libraries might contain the genomes of all of the organisms you work on, along with PhiX, Vectors or other contaminants commonly seen in sequencing experiments.
