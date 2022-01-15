@@ -1,5 +1,6 @@
 <img src="https://raw.githubusercontent.com/StevenWingett/FastQ-Screen/master/FastQ_Screen_Logo.png" alt="drawing" width="200"/>
 
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/StevenWingett/Fastq-Screen)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5838377.svg)](https://doi.org/10.5281/zenodo.5838377)
 
 Introduction
