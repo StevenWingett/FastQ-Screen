@@ -1,0 +1,2 @@
+ftp1.babraham.ac.uk/ftpusr46/FastQ_Screen_Genomes/
+ftp1.babraham.ac.uk/ftpusr46/FastQ_Screen_Genomes_Bisulfite/
