@@ -1,3 +1,11 @@
+Release notes for FastQ Screen v0.15.2 (26 January 2022)
+--------------------------------------------------------
+Updated documentation
+
+Provided details on the genomes downloaded with the 
+command --get_genomes for possible future reference.
+
+
 Release notes for FastQ Screen v0.15.1 (11 January 2022)
 --------------------------------------------------------
 Updated contact details. 
