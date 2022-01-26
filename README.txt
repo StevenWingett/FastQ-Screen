@@ -11,7 +11,7 @@ The FastQ Screen Homepage is found at:
 https://www.bioinformatics.babraham.ac.uk/projects/fastq_screen
 
 Full documentation on using the software is provided at:
-https://www.bioinformatics.babraham.ac.uk/projects/fastq_screen/_build/html/index.html
+https://stevenwingett.github.io/FastQ-Screen/
 
 The codebase is maintained at:
 https://github.com/StevenWingett/FastQ-Screen
