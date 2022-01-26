@@ -1,0 +1,373 @@
+.
+├── FastQ_Screen_Genomes
+│   ├── Adapters
+│   │   ├── Contaminants.1.bt2
+│   │   ├── Contaminants.2.bt2
+│   │   ├── Contaminants.3.bt2
+│   │   ├── Contaminants.4.bt2
+│   │   ├── Contaminants.rev.1.bt2
+│   │   └── Contaminants.rev.2.bt2
+│   ├── Arabidopsis
+│   │   ├── Arabidopsis_thaliana.TAIR10.1.bt2
+│   │   ├── Arabidopsis_thaliana.TAIR10.2.bt2
+│   │   ├── Arabidopsis_thaliana.TAIR10.3.bt2
+│   │   ├── Arabidopsis_thaliana.TAIR10.4.bt2
+│   │   ├── Arabidopsis_thaliana.TAIR10.rev.1.bt2
+│   │   └── Arabidopsis_thaliana.TAIR10.rev.2.bt2
+│   ├── Drosophila
+│   │   ├── BDGP6.1.bt2
+│   │   ├── BDGP6.2.bt2
+│   │   ├── BDGP6.3.bt2
+│   │   ├── BDGP6.4.bt2
+│   │   ├── BDGP6.rev.1.bt2
+│   │   └── BDGP6.rev.2.bt2
+│   ├── E_coli
+│   │   ├── Ecoli.1.bt2
+│   │   ├── Ecoli.2.bt2
+│   │   ├── Ecoli.3.bt2
+│   │   ├── Ecoli.4.bt2
+│   │   ├── Ecoli.rev.1.bt2
+│   │   └── Ecoli.rev.2.bt2
+│   ├── fastq_screen.conf
+│   ├── Human
+│   │   ├── Homo_sapiens.GRCh38.1.bt2
+│   │   ├── Homo_sapiens.GRCh38.2.bt2
+│   │   ├── Homo_sapiens.GRCh38.3.bt2
+│   │   ├── Homo_sapiens.GRCh38.4.bt2
+│   │   ├── Homo_sapiens.GRCh38.rev.1.bt2
+│   │   └── Homo_sapiens.GRCh38.rev.2.bt2
+│   ├── Lambda
+│   │   ├── Lambda.1.bt2
+│   │   ├── Lambda.2.bt2
+│   │   ├── Lambda.3.bt2
+│   │   ├── Lambda.4.bt2
+│   │   ├── Lambda.rev.1.bt2
+│   │   └── Lambda.rev.2.bt2
+│   ├── Mitochondria
+│   │   ├── mitochondria.1.bt2
+│   │   ├── mitochondria.2.bt2
+│   │   ├── mitochondria.3.bt2
+│   │   ├── mitochondria.4.bt2
+│   │   ├── mitochondria.rev.1.bt2
+│   │   └── mitochondria.rev.2.bt2
+│   ├── Mouse
+│   │   ├── Mus_musculus.GRCm38.1.bt2
+│   │   ├── Mus_musculus.GRCm38.2.bt2
+│   │   ├── Mus_musculus.GRCm38.3.bt2
+│   │   ├── Mus_musculus.GRCm38.4.bt2
+│   │   ├── Mus_musculus.GRCm38.rev.1.bt2
+│   │   └── Mus_musculus.GRCm38.rev.2.bt2
+│   ├── PhiX
+│   │   ├── phi_plus_SNPs.1.bt2
+│   │   ├── phi_plus_SNPs.2.bt2
+│   │   ├── phi_plus_SNPs.3.bt2
+│   │   ├── phi_plus_SNPs.4.bt2
+│   │   ├── phi_plus_SNPs.rev.1.bt2
+│   │   └── phi_plus_SNPs.rev.2.bt2
+│   ├── Rat
+│   │   ├── Rnor_6.0.1.bt2
+│   │   ├── Rnor_6.0.2.bt2
+│   │   ├── Rnor_6.0.3.bt2
+│   │   ├── Rnor_6.0.4.bt2
+│   │   ├── Rnor_6.0.rev.1.bt2
+│   │   └── Rnor_6.0.rev.2.bt2
+│   ├── rRNA
+│   │   ├── GRCm38_rRNA.1.bt2
+│   │   ├── GRCm38_rRNA.2.bt2
+│   │   ├── GRCm38_rRNA.3.bt2
+│   │   ├── GRCm38_rRNA.4.bt2
+│   │   ├── GRCm38_rRNA.fa
+│   │   ├── GRCm38_rRNA.rev.1.bt2
+│   │   └── GRCm38_rRNA.rev.2.bt2
+│   ├── Vectors
+│   │   ├── Vectors.1.bt2
+│   │   ├── Vectors.2.bt2
+│   │   ├── Vectors.3.bt2
+│   │   ├── Vectors.4.bt2
+│   │   ├── Vectors.rev.1.bt2
+│   │   └── Vectors.rev.2.bt2
+│   ├── Worm
+│   │   ├── Caenorhabditis_elegans.WBcel235.1.bt2
+│   │   ├── Caenorhabditis_elegans.WBcel235.2.bt2
+│   │   ├── Caenorhabditis_elegans.WBcel235.3.bt2
+│   │   ├── Caenorhabditis_elegans.WBcel235.4.bt2
+│   │   ├── Caenorhabditis_elegans.WBcel235.rev.1.bt2
+│   │   └── Caenorhabditis_elegans.WBcel235.rev.2.bt2
+│   └── Yeast
+│       ├── Saccharomyces_cerevisiae.R64-1-1.1.bt2
+│       ├── Saccharomyces_cerevisiae.R64-1-1.2.bt2
+│       ├── Saccharomyces_cerevisiae.R64-1-1.3.bt2
+│       ├── Saccharomyces_cerevisiae.R64-1-1.4.bt2
+│       ├── Saccharomyces_cerevisiae.R64-1-1.rev.1.bt2
+│       └── Saccharomyces_cerevisiae.R64-1-1.rev.2.bt2
+├── FastQ_Screen_Genomes_Bisulfite
+│   ├── Arabidopsis
+│   │   └── TAIR10
+│   │       ├── Arabidopsis_thaliana.TAIR10.31.dna.chromosome.1.fa.gz
+│   │       ├── Arabidopsis_thaliana.TAIR10.31.dna.chromosome.2.fa.gz
+│   │       ├── Arabidopsis_thaliana.TAIR10.31.dna.chromosome.3.fa.gz
+│   │       ├── Arabidopsis_thaliana.TAIR10.31.dna.chromosome.4.fa.gz
+│   │       ├── Arabidopsis_thaliana.TAIR10.31.dna.chromosome.5.fa.gz
+│   │       ├── Arabidopsis_thaliana.TAIR10.31.dna.chromosome.Mt.fa.gz
+│   │       ├── Arabidopsis_thaliana.TAIR10.31.dna.chromosome.Pt.fa.gz
+│   │       └── Bisulfite_Genome
+│   │           ├── CT_conversion
+│   │           │   ├── BS_CT.1.bt2
+│   │           │   ├── BS_CT.2.bt2
+│   │           │   ├── BS_CT.3.bt2
+│   │           │   ├── BS_CT.4.bt2
+│   │           │   ├── BS_CT.rev.1.bt2
+│   │           │   └── BS_CT.rev.2.bt2
+│   │           └── GA_conversion
+│   │               ├── BS_GA.1.bt2
+│   │               ├── BS_GA.2.bt2
+│   │               ├── BS_GA.3.bt2
+│   │               ├── BS_GA.4.bt2
+│   │               ├── BS_GA.rev.1.bt2
+│   │               └── BS_GA.rev.2.bt2
+│   ├── C_elegans
+│   │   └── WBcel235
+│   │       ├── Bisulfite_Genome
+│   │       │   ├── CT_conversion
+│   │       │   │   ├── BS_CT.1.bt2
+│   │       │   │   ├── BS_CT.2.bt2
+│   │       │   │   ├── BS_CT.3.bt2
+│   │       │   │   ├── BS_CT.4.bt2
+│   │       │   │   ├── BS_CT.rev.1.bt2
+│   │       │   │   └── BS_CT.rev.2.bt2
+│   │       │   └── GA_conversion
+│   │       │       ├── BS_GA.1.bt2
+│   │       │       ├── BS_GA.2.bt2
+│   │       │       ├── BS_GA.3.bt2
+│   │       │       ├── BS_GA.4.bt2
+│   │       │       ├── BS_GA.rev.1.bt2
+│   │       │       └── BS_GA.rev.2.bt2
+│   │       ├── Caenorhabditis_elegans.WBcel235.74.dna.chromosome.I.fa.gz
+│   │       ├── Caenorhabditis_elegans.WBcel235.74.dna.chromosome.II.fa.gz
+│   │       ├── Caenorhabditis_elegans.WBcel235.74.dna.chromosome.III.fa.gz
+│   │       ├── Caenorhabditis_elegans.WBcel235.74.dna.chromosome.IV.fa.gz
+│   │       ├── Caenorhabditis_elegans.WBcel235.74.dna.chromosome.MtDNA.fa.gz
+│   │       ├── Caenorhabditis_elegans.WBcel235.74.dna.chromosome.V.fa.gz
+│   │       └── Caenorhabditis_elegans.WBcel235.74.dna.chromosome.X.fa.gz
+│   ├── Drosophila_melanogaster
+│   │   └── BDGP6
+│   │       ├── Bisulfite_Genome
+│   │       │   ├── CT_conversion
+│   │       │   │   ├── BS_CT.1.bt2
+│   │       │   │   ├── BS_CT.2.bt2
+│   │       │   │   ├── BS_CT.3.bt2
+│   │       │   │   ├── BS_CT.4.bt2
+│   │       │   │   ├── BS_CT.rev.1.bt2
+│   │       │   │   └── BS_CT.rev.2.bt2
+│   │       │   └── GA_conversion
+│   │       │       ├── BS_GA.1.bt2
+│   │       │       ├── BS_GA.2.bt2
+│   │       │       ├── BS_GA.3.bt2
+│   │       │       ├── BS_GA.4.bt2
+│   │       │       ├── BS_GA.rev.1.bt2
+│   │       │       └── BS_GA.rev.2.bt2
+│   │       ├── Drosophila_melanogaster.BDGP6.dna.chromosome.2L.fa.gz
+│   │       ├── Drosophila_melanogaster.BDGP6.dna.chromosome.2R.fa.gz
+│   │       ├── Drosophila_melanogaster.BDGP6.dna.chromosome.3L.fa.gz
+│   │       ├── Drosophila_melanogaster.BDGP6.dna.chromosome.3R.fa.gz
+│   │       ├── Drosophila_melanogaster.BDGP6.dna.chromosome.4.fa.gz
+│   │       ├── Drosophila_melanogaster.BDGP6.dna.chromosome.dmel_mitochondrion_genome.fa.gz
+│   │       ├── Drosophila_melanogaster.BDGP6.dna.chromosome.X.fa.gz
+│   │       ├── Drosophila_melanogaster.BDGP6.dna.chromosome.Y.fa.gz
+│   │       └── Drosophila_melanogaster.BDGP6.dna.nonchromosomal.fa.gz
+│   ├── E_coli
+│   │   └── NC_010473
+│   │       ├── Bisulfite_Genome
+│   │       │   ├── CT_conversion
+│   │       │   │   ├── BS_CT.1.bt2
+│   │       │   │   ├── BS_CT.2.bt2
+│   │       │   │   ├── BS_CT.3.bt2
+│   │       │   │   ├── BS_CT.4.bt2
+│   │       │   │   ├── BS_CT.rev.1.bt2
+│   │       │   │   └── BS_CT.rev.2.bt2
+│   │       │   └── GA_conversion
+│   │       │       ├── BS_GA.1.bt2
+│   │       │       ├── BS_GA.2.bt2
+│   │       │       ├── BS_GA.3.bt2
+│   │       │       ├── BS_GA.4.bt2
+│   │       │       ├── BS_GA.rev.1.bt2
+│   │       │       └── BS_GA.rev.2.bt2
+│   │       └── NC_010473.fa.gz
+│   ├── fastq_screen.conf
+│   ├── Human
+│   │   └── GRCh38
+│   │       ├── Bisulfite_Genome
+│   │       │   ├── CT_conversion
+│   │       │   │   ├── BS_CT.1.bt2
+│   │       │   │   ├── BS_CT.2.bt2
+│   │       │   │   ├── BS_CT.3.bt2
+│   │       │   │   ├── BS_CT.4.bt2
+│   │       │   │   ├── BS_CT.rev.1.bt2
+│   │       │   │   └── BS_CT.rev.2.bt2
+│   │       │   └── GA_conversion
+│   │       │       ├── BS_GA.1.bt2
+│   │       │       ├── BS_GA.2.bt2
+│   │       │       ├── BS_GA.3.bt2
+│   │       │       ├── BS_GA.4.bt2
+│   │       │       ├── BS_GA.rev.1.bt2
+│   │       │       └── BS_GA.rev.2.bt2
+│   │       ├── Homo_sapiens.GRCh38.dna.chromosome.10.fa.gz
+│   │       ├── Homo_sapiens.GRCh38.dna.chromosome.11.fa.gz
+│   │       ├── Homo_sapiens.GRCh38.dna.chromosome.12.fa.gz
+│   │       ├── Homo_sapiens.GRCh38.dna.chromosome.13.fa.gz
+│   │       ├── Homo_sapiens.GRCh38.dna.chromosome.14.fa.gz
+│   │       ├── Homo_sapiens.GRCh38.dna.chromosome.15.fa.gz
+│   │       ├── Homo_sapiens.GRCh38.dna.chromosome.16.fa.gz
+│   │       ├── Homo_sapiens.GRCh38.dna.chromosome.17.fa.gz
+│   │       ├── Homo_sapiens.GRCh38.dna.chromosome.18.fa.gz
+│   │       ├── Homo_sapiens.GRCh38.dna.chromosome.19.fa.gz
+│   │       ├── Homo_sapiens.GRCh38.dna.chromosome.1.fa.gz
+│   │       ├── Homo_sapiens.GRCh38.dna.chromosome.20.fa.gz
+│   │       ├── Homo_sapiens.GRCh38.dna.chromosome.21.fa.gz
+│   │       ├── Homo_sapiens.GRCh38.dna.chromosome.22.fa.gz
+│   │       ├── Homo_sapiens.GRCh38.dna.chromosome.2.fa.gz
+│   │       ├── Homo_sapiens.GRCh38.dna.chromosome.3.fa.gz
+│   │       ├── Homo_sapiens.GRCh38.dna.chromosome.4.fa.gz
+│   │       ├── Homo_sapiens.GRCh38.dna.chromosome.5.fa.gz
+│   │       ├── Homo_sapiens.GRCh38.dna.chromosome.6.fa.gz
+│   │       ├── Homo_sapiens.GRCh38.dna.chromosome.7.fa.gz
+│   │       ├── Homo_sapiens.GRCh38.dna.chromosome.8.fa.gz
+│   │       ├── Homo_sapiens.GRCh38.dna.chromosome.9.fa.gz
+│   │       ├── Homo_sapiens.GRCh38.dna.chromosome.MT.fa.gz
+│   │       ├── Homo_sapiens.GRCh38.dna.chromosome.X.fa.gz
+│   │       └── Homo_sapiens.GRCh38.dna.chromosome.Y.fa.gz
+│   ├── Mouse
+│   │   └── GRCm38
+│   │       ├── Bisulfite_Genome
+│   │       │   ├── CT_conversion
+│   │       │   │   ├── BS_CT.1.bt2
+│   │       │   │   ├── BS_CT.2.bt2
+│   │       │   │   ├── BS_CT.3.bt2
+│   │       │   │   ├── BS_CT.4.bt2
+│   │       │   │   ├── BS_CT.rev.1.bt2
+│   │       │   │   └── BS_CT.rev.2.bt2
+│   │       │   └── GA_conversion
+│   │       │       ├── BS_GA.1.bt2
+│   │       │       ├── BS_GA.2.bt2
+│   │       │       ├── BS_GA.3.bt2
+│   │       │       ├── BS_GA.4.bt2
+│   │       │       ├── BS_GA.rev.1.bt2
+│   │       │       └── BS_GA.rev.2.bt2
+│   │       ├── Mus_musculus.GRCm38.68.dna.chromosome.10.fa.gz
+│   │       ├── Mus_musculus.GRCm38.68.dna.chromosome.11.fa.gz
+│   │       ├── Mus_musculus.GRCm38.68.dna.chromosome.12.fa.gz
+│   │       ├── Mus_musculus.GRCm38.68.dna.chromosome.13.fa.gz
+│   │       ├── Mus_musculus.GRCm38.68.dna.chromosome.14.fa.gz
+│   │       ├── Mus_musculus.GRCm38.68.dna.chromosome.15.fa.gz
+│   │       ├── Mus_musculus.GRCm38.68.dna.chromosome.16.fa.gz
+│   │       ├── Mus_musculus.GRCm38.68.dna.chromosome.17.fa.gz
+│   │       ├── Mus_musculus.GRCm38.68.dna.chromosome.18.fa.gz
+│   │       ├── Mus_musculus.GRCm38.68.dna.chromosome.19.fa.gz
+│   │       ├── Mus_musculus.GRCm38.68.dna.chromosome.1.fa.gz
+│   │       ├── Mus_musculus.GRCm38.68.dna.chromosome.2.fa.gz
+│   │       ├── Mus_musculus.GRCm38.68.dna.chromosome.3.fa.gz
+│   │       ├── Mus_musculus.GRCm38.68.dna.chromosome.4.fa.gz
+│   │       ├── Mus_musculus.GRCm38.68.dna.chromosome.5.fa.gz
+│   │       ├── Mus_musculus.GRCm38.68.dna.chromosome.6.fa.gz
+│   │       ├── Mus_musculus.GRCm38.68.dna.chromosome.7.fa.gz
+│   │       ├── Mus_musculus.GRCm38.68.dna.chromosome.8.fa.gz
+│   │       ├── Mus_musculus.GRCm38.68.dna.chromosome.9.fa.gz
+│   │       ├── Mus_musculus.GRCm38.68.dna.chromosome.MT.fa.gz
+│   │       ├── Mus_musculus.GRCm38.68.dna.chromosome.X.fa.gz
+│   │       └── Mus_musculus.GRCm38.68.dna.chromosome.Y.fa.gz
+│   ├── PhiX
+│   │   └── phiX174_plus_SNPs
+│   │       ├── Bisulfite_Genome
+│   │       │   ├── CT_conversion
+│   │       │   │   ├── BS_CT.1.bt2
+│   │       │   │   ├── BS_CT.2.bt2
+│   │       │   │   ├── BS_CT.3.bt2
+│   │       │   │   ├── BS_CT.4.bt2
+│   │       │   │   ├── BS_CT.rev.1.bt2
+│   │       │   │   └── BS_CT.rev.2.bt2
+│   │       │   └── GA_conversion
+│   │       │       ├── BS_GA.1.bt2
+│   │       │       ├── BS_GA.2.bt2
+│   │       │       ├── BS_GA.3.bt2
+│   │       │       ├── BS_GA.4.bt2
+│   │       │       ├── BS_GA.rev.1.bt2
+│   │       │       └── BS_GA.rev.2.bt2
+│   │       └── phi_plus_SNPs.fa.gz
+│   ├── Rat
+│   │   └── Rnor_6.0
+│   │       ├── Bisulfite_Genome
+│   │       │   ├── CT_conversion
+│   │       │   │   ├── BS_CT.1.bt2
+│   │       │   │   ├── BS_CT.2.bt2
+│   │       │   │   ├── BS_CT.3.bt2
+│   │       │   │   ├── BS_CT.4.bt2
+│   │       │   │   ├── BS_CT.rev.1.bt2
+│   │       │   │   └── BS_CT.rev.2.bt2
+│   │       │   └── GA_conversion
+│   │       │       ├── BS_GA.1.bt2
+│   │       │       ├── BS_GA.2.bt2
+│   │       │       ├── BS_GA.3.bt2
+│   │       │       ├── BS_GA.4.bt2
+│   │       │       ├── BS_GA.rev.1.bt2
+│   │       │       └── BS_GA.rev.2.bt2
+│   │       ├── Rattus_norvegicus.Rnor_6.0.dna.chromosome.10.fa.gz
+│   │       ├── Rattus_norvegicus.Rnor_6.0.dna.chromosome.11.fa.gz
+│   │       ├── Rattus_norvegicus.Rnor_6.0.dna.chromosome.12.fa.gz
+│   │       ├── Rattus_norvegicus.Rnor_6.0.dna.chromosome.13.fa.gz
+│   │       ├── Rattus_norvegicus.Rnor_6.0.dna.chromosome.14.fa.gz
+│   │       ├── Rattus_norvegicus.Rnor_6.0.dna.chromosome.15.fa.gz
+│   │       ├── Rattus_norvegicus.Rnor_6.0.dna.chromosome.16.fa.gz
+│   │       ├── Rattus_norvegicus.Rnor_6.0.dna.chromosome.17.fa.gz
+│   │       ├── Rattus_norvegicus.Rnor_6.0.dna.chromosome.18.fa.gz
+│   │       ├── Rattus_norvegicus.Rnor_6.0.dna.chromosome.19.fa.gz
+│   │       ├── Rattus_norvegicus.Rnor_6.0.dna.chromosome.1.fa.gz
+│   │       ├── Rattus_norvegicus.Rnor_6.0.dna.chromosome.20.fa.gz
+│   │       ├── Rattus_norvegicus.Rnor_6.0.dna.chromosome.2.fa.gz
+│   │       ├── Rattus_norvegicus.Rnor_6.0.dna.chromosome.3.fa.gz
+│   │       ├── Rattus_norvegicus.Rnor_6.0.dna.chromosome.4.fa.gz
+│   │       ├── Rattus_norvegicus.Rnor_6.0.dna.chromosome.5.fa.gz
+│   │       ├── Rattus_norvegicus.Rnor_6.0.dna.chromosome.6.fa.gz
+│   │       ├── Rattus_norvegicus.Rnor_6.0.dna.chromosome.7.fa.gz
+│   │       ├── Rattus_norvegicus.Rnor_6.0.dna.chromosome.8.fa.gz
+│   │       ├── Rattus_norvegicus.Rnor_6.0.dna.chromosome.9.fa.gz
+│   │       ├── Rattus_norvegicus.Rnor_6.0.dna.chromosome.MT.fa.gz
+│   │       ├── Rattus_norvegicus.Rnor_6.0.dna.chromosome.X.fa.gz
+│   │       ├── Rattus_norvegicus.Rnor_6.0.dna.chromosome.Y.fa.gz
+│   │       └── Rattus_norvegicus.Rnor_6.0.dna.nonchromosomal.fa.gz
+│   └── Yeast
+│       └── R64-1-1
+│           ├── Bisulfite_Genome
+│           │   ├── CT_conversion
+│           │   │   ├── BS_CT.1.bt2
+│           │   │   ├── BS_CT.2.bt2
+│           │   │   ├── BS_CT.3.bt2
+│           │   │   ├── BS_CT.4.bt2
+│           │   │   ├── BS_CT.rev.1.bt2
+│           │   │   └── BS_CT.rev.2.bt2
+│           │   └── GA_conversion
+│           │       ├── BS_GA.1.bt2
+│           │       ├── BS_GA.2.bt2
+│           │       ├── BS_GA.3.bt2
+│           │       ├── BS_GA.4.bt2
+│           │       ├── BS_GA.rev.1.bt2
+│           │       └── BS_GA.rev.2.bt2
+│           ├── Saccharomyces_cerevisiae.R64-1-1.dna.chromosome.I.fa.gz
+│           ├── Saccharomyces_cerevisiae.R64-1-1.dna.chromosome.II.fa.gz
+│           ├── Saccharomyces_cerevisiae.R64-1-1.dna.chromosome.III.fa.gz
+│           ├── Saccharomyces_cerevisiae.R64-1-1.dna.chromosome.IV.fa.gz
+│           ├── Saccharomyces_cerevisiae.R64-1-1.dna.chromosome.IX.fa.gz
+│           ├── Saccharomyces_cerevisiae.R64-1-1.dna.chromosome.Mito.fa.gz
+│           ├── Saccharomyces_cerevisiae.R64-1-1.dna.chromosome.V.fa.gz
+│           ├── Saccharomyces_cerevisiae.R64-1-1.dna.chromosome.VI.fa.gz
+│           ├── Saccharomyces_cerevisiae.R64-1-1.dna.chromosome.VII.fa.gz
+│           ├── Saccharomyces_cerevisiae.R64-1-1.dna.chromosome.VIII.fa.gz
+│           ├── Saccharomyces_cerevisiae.R64-1-1.dna.chromosome.X.fa.gz
+│           ├── Saccharomyces_cerevisiae.R64-1-1.dna.chromosome.XI.fa.gz
+│           ├── Saccharomyces_cerevisiae.R64-1-1.dna.chromosome.XII.fa.gz
+│           ├── Saccharomyces_cerevisiae.R64-1-1.dna.chromosome.XIII.fa.gz
+│           ├── Saccharomyces_cerevisiae.R64-1-1.dna.chromosome.XIV.fa.gz
+│           ├── Saccharomyces_cerevisiae.R64-1-1.dna.chromosome.XV.fa.gz
+│           └── Saccharomyces_cerevisiae.R64-1-1.dna.chromosome.XVI.fa.gz
+└── genomes_tree.txt
+
+61 directories, 309 files
