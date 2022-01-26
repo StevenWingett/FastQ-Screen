@@ -165,7 +165,9 @@ Mapping bisulfite converted sequences is possible with FastQ Screen, which uses 
 FastQ Screen, when run in Bisulfite mode, reports to which strand the 
 reads aligned (original top strand, complementary to original top 
 strand, complementary to original bottom strand, or original bottom 
-strand). Refer to the [Bismark](http://www.bioinformatics.babraham.ac.uk/projects/bismark) documentation for more details on these bisulfite strand definitions.  
+strand). Refer to the [Bismark](http://www.bioinformatics.babraham.ac.uk/projects/bismark) documentation for more details on these bisulfite strand definitions.
+
+A bisulfite test dataset may be obtained from [here.](https://github.com/FelixKrueger/Bismark/blob/master/test_data.fastq)
 
 
 Filtering FastQ Files
