@@ -5,9 +5,9 @@ name: CI
 # Controls when the action will run. Triggers the workflow on push or pull request
 on:
   push:
-    branches: [ master, pre_release ]
+    branches: [ master ]
   pull_request:
-    branches: [ master, pre_release ]
+    branches: [ master ]
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
