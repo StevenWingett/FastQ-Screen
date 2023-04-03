@@ -1,3 +1,11 @@
+Release notes for FastQ Screen v0.15.3 (03 April 2023)
+--------------------------------------------------------
+Fixed filtering bug causing the final filtered FASTQ 
+file to have the file extension .fastq when it should be 
+.fastq.gz, since the file is actually gzipped.
+
+
+
 Release notes for FastQ Screen v0.15.2 (26 January 2022)
 --------------------------------------------------------
 Updated documentation

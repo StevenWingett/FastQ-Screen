@@ -13,12 +13,12 @@ use File::Path;
 use Data::Dumper;
 
 
-our $VERSION = "0.15.3.dev";
+our $VERSION = "0.15.3";
 
 ###########################################################################
 ###########################################################################
 ##                                                                       ##
-## Copyright 2022, Simon Andrews    (The Babraham Institute, UK)         ##
+## Copyright 2023, Simon Andrews    (The Babraham Institute, UK)         ##
 ##                 Steven Wingett   (MRC-LMB, Cambridge, UK)             ##
 ##                 Felix Krueger    (The Babraham Institute, UK)         ##
 ##                 Mark Fiers       (Plant & Food Research, NZ)          ##
@@ -163,7 +163,6 @@ if(defined $get_genomes){
 	exit(0);
 }
 
-
 # Identify input files
 my @files = get_paths(@ARGV);
 
@@ -173,7 +172,6 @@ foreach my $file (@files) {
         last;
     }
 }
-
 
 if(defined $filter){
 	die "Option --filter not in the correct format, see --help for more details.\n" unless($filter =~ /^[012345-]+$/);
@@ -322,18 +320,8 @@ if ( ( ( 1 << 32 ) != 4294967296 ) and ( scalar @libraries > 15 ) ) {    #32-bit
     die "Maximum number of reference genomes exceeded, please adjust configuration and specify at most 32 libraries.\n";
 }
 
-#my @files = get_paths(@ARGV);
 
 die "No files to process\n" unless (@files);
-
-#If the --no_hits option is selected, decide whether the output should be
-#be compressed by assessing whether any of the input is compressed
-#foreach my $file (@files) {
-#    if ( $file =~ /\.gz$/ ) {
-#        $zip_data_output = 1;
-#        last;
-#    }
-#}
 
 my $index = 0;
 while ( $index <= $#files ) {
