@@ -13,14 +13,14 @@ use File::Path;
 use Data::Dumper;
 
 
-our $VERSION = "0.15.2";
+our $VERSION = "0.15.3.dev";
 
 ###########################################################################
 ###########################################################################
 ##                                                                       ##
 ## Copyright 2022, Simon Andrews    (The Babraham Institute, UK)         ##
 ##                 Steven Wingett   (MRC-LMB, Cambridge, UK)             ##
-##                 Felix Krueger    (The Babraham Institute UK)          ##
+##                 Felix Krueger    (The Babraham Institute, UK)         ##
 ##                 Mark Fiers       (Plant & Food Research, NZ)          ##
 ##                                                                       ##
 ## This program is free software: you can redistribute it and/or modify  ##
@@ -67,7 +67,7 @@ my $filter;
 my $top;
 my $skip = 0;    #Specified via $top variable
 my $pass;
-my $inverse;
+my $inverse = 0;
 my $get_genomes;
 my $add_genome;
 
@@ -99,6 +99,7 @@ my $config_result = GetOptions(
 );
 
 die "Could not parse options, please adjust configuration.\n" unless ($config_result);
+
 
 if ($help) {
     print while (<DATA>);
@@ -163,12 +164,23 @@ if(defined $get_genomes){
 }
 
 
+# Identify input files
+my @files = get_paths(@ARGV);
+
+foreach my $file (@files) {
+    if ( $file =~ /\.gz$/ ) {
+        $zip_data_output = 1;
+        last;
+    }
+}
+
+
 if(defined $filter){
 	die "Option --filter not in the correct format, see --help for more details.\n" unless($filter =~ /^[012345-]+$/);
 	die "Option --filter may not contain only hyphens '-'\n" if($filter =~ /^-+$/);
 	
 	if(!defined $tag){
-		process_tag_files(@ARGV);		
+		process_tag_files(@files);		
 		warn "Filtering complete.\n" unless ($quiet);
 		exit (0);
 	}
@@ -187,10 +199,8 @@ if(defined $pass){
 	}
 }
 
-if(defined $inverse){
+if($inverse != 0){
 	die "Option --inverse may only be used in conjunction with --filter" unless(defined $filter);
-} else {
-	$inverse = 0;    #Set to 0 for later usage
 }
 
 if (defined $aligner) {
@@ -312,18 +322,18 @@ if ( ( ( 1 << 32 ) != 4294967296 ) and ( scalar @libraries > 15 ) ) {    #32-bit
     die "Maximum number of reference genomes exceeded, please adjust configuration and specify at most 32 libraries.\n";
 }
 
-my @files = get_paths(@ARGV);
+#my @files = get_paths(@ARGV);
 
 die "No files to process\n" unless (@files);
 
 #If the --no_hits option is selected, decide whether the output should be
 #be compressed by assessing whether any of the input is compressed
-foreach my $file (@files) {
-    if ( $file =~ /\.gz$/ ) {
-        $zip_data_output = 1;
-        last;
-    }
-}
+#foreach my $file (@files) {
+#    if ( $file =~ /\.gz$/ ) {
+#        $zip_data_output = 1;
+#        last;
+#    }
+#}
 
 my $index = 0;
 while ( $index <= $#files ) {
@@ -639,7 +649,7 @@ sub process_file {
 }
 
 
-#Tag files are processed and a filter file is produces
+#Tag files are processed and a filter file is produced
 #Takes an array of the files to process
 sub process_tag_files{
 	my @files = get_paths(@_);
