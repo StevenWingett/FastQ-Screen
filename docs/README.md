@@ -1,7 +1,11 @@
 <img src="https://raw.githubusercontent.com/StevenWingett/FastQ-Screen/master/FastQ_Screen_Logo.png" alt="drawing" width="200"/>
 
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/StevenWingett/Fastq-Screen)
+
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5838377.svg)](https://doi.org/10.5281/zenodo.5838377)
+
+[![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat)](http://bioconda.github.io/recipes/fastq-screen/README.html)
+[![Anaconda-Server Badge](https://anaconda.org/bioconda/fastq-screen/badges/downloads.svg)](https://anaconda.org/bioconda/fastq-screen)
 
 Introduction
 ============
@@ -103,6 +107,11 @@ You will see a folder called fastq_screen_v0.x.x has been created and the progra
 /usr/local/bin or by adding the program installation directory to your search path.
 
 
+Bioconda
+========
+Alternatively, [FastQ Screen may be installed via Bioconda.](https://bioconda.github.io/recipes/fastq-screen/README.html?highlight=fastq_screen)  **Please note that we do not manage FastQ Screen on Bioconda, so please direct any questions regarding this setup to the relevant Bioconda developers.**  Many thanks to those developers for making our tool available via this platform. 
+
+
 Configuration
 =============
 In order to use FastQ Screen you will need to configure some genome databases for the program to search.  This will involve downloading the sequences for the databases in FASTA format and then using either Bowtie, Bowtie2 or BWA to build the relevant index files.  Please note: the aligner used to build the index files must be used to map the reads
@@ -144,11 +153,11 @@ To confirm FastQ Screen functions correctly on your system please download the [
 
     tar xvzf fastq_screen_test_dataset.tar.gz
 
-2. If not present already, create index files of recent versions of the Mouse and Human genomes (how the index files are generated will depend on the aligner used for the mapping i.e. refer to either the Bowtie, Bowtie2 or BWA documentation for further details).
+1. If not present already, create index files of recent versions of the Mouse and Human genomes (how the index files are generated will depend on the aligner used for the mapping i.e. refer to either the Bowtie, Bowtie2 or BWA documentation for further details).
 
-3. Create a configuration file tailored to your system.
+2. Create a configuration file tailored to your system.
 
-4. Run FastQ Screen
+3. Run FastQ Screen
 
 
 Interpreting the results from a large number of datasets
@@ -206,7 +215,7 @@ The option --nohits is equivalent to --tag --filter 0000 (zero for every genome 
 
 By adjusting the filters and, if necessary, undergoing several rounds of filtering it should be possible for a user to extract the desired reads.
 
-Filtering paired-end reads files separately will generate files with un-paired reads e.g. a read may be present in File1, but its corresponding pair may not be found in File2.  Also, the order of the reads in processed files may not correspond to on another.  Consequently, the resulting file pairs will need processing after filtering with FastQ Screen.  [Several tools are available (although not currently produced by us) to achieve this re-pairing.](https://jgi.doe.gov/data-and-tools/bbtools/bb-tools-user-guide/repair-guide)  
+Filtering paired-end reads files separately will generate files with un-paired reads e.g. a read may be present in File1, but its corresponding pair may not be found in File2.  Also, the order of the reads in processed files may not correspond to on another.  Consequently, the resulting file pairs will need processing after filtering with FastQ Screen.  [Several tools are available (although not currently produced by us) to achieve this re-pairing.](https://jgi.doe.gov/data-and-tools/software-tools/bbtools/bb-tools-user-guide/repair-guide/)  
 
 There may also may be occasions when, after filtering a FASTQ file, the tags need to be removed from the headers of each read.  This can be achieved using the script Misc/remove_tags.pl.
 
