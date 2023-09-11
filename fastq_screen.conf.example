@@ -1,9 +1,9 @@
 # This is an example configuration file for FastQ Screen
 
-############################
-## Bowtie, Bowtie 2 or BWA #
-############################
-## If the Bowtie, Bowtie 2 or BWA binary is not in your PATH, you can set 
+######################################
+## Bowtie, Bowtie 2, BWA or minimap2 #
+######################################
+## If the Bowtie, Bowtie 2, BWA or minimap2 binary is not in your PATH, you can set 
 ## this value to tell the program where to find your chosen aligner.  Uncomment 
 ## the relevant line below and set the appropriate location.  Please note, 
 ## this path should INCLUDE the executable filename.
@@ -11,6 +11,7 @@
 #BOWTIE	/usr/local/bin/bowtie/bowtie
 #BOWTIE2 /usr/local/bowtie2/bowtie2
 #BWA /usr/local/bwa/bwa
+#MINIMAP2 /usr/local/minimap2/minimap2
 
 
 

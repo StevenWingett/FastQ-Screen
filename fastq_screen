@@ -56,6 +56,7 @@ my $bowtie_opts;
 my $bowtie2_opts;
 my $bismark_opts;
 my $bwa_opts;
+my $minimap2_opts;
 my $nohits;
 my $zip_data_output = 0;
 my $aligner;
@@ -83,6 +84,7 @@ my $config_result = GetOptions(
     "bowtie2=s"   => \$bowtie2_opts,
     "bismark=s"   => \$bismark_opts,
     "bwa=s"       => \$bwa_opts,
+    "minimap2=s"  => \$minimap2_opts,
     "threads=i"   => \$threads,
     "nohits"      => \$nohits,
     "aligner=s"   => \$aligner,
@@ -203,20 +205,32 @@ if($inverse != 0){
 
 if (defined $aligner) {
     $aligner = lc $aligner;
-    if ( ( $aligner ne 'bowtie' ) and ( $aligner ne 'bowtie2' ) and ($aligner ne 'bwa'))  {
-        die "Valid options for --aligner are 'bowtie', 'bowtie2' or 'bwa' only.\n";
+    if ( ( $aligner ne 'bowtie' ) and ( $aligner ne 'bowtie2' ) and ($aligner ne 'bwa') and ($aligner ne 'minimap2') )  {
+        die "Valid options for --aligner are 'bowtie', 'bowtie2', 'bwa' or 'minimap2' only.\n";
     } elsif ( ( $aligner eq 'bowtie' ) and ( defined $bowtie2_opts ) ) {
         die "Bowtie selected as the aligner yet bowtie2 options specified.\n"; 
     } elsif ( ( $aligner eq 'bowtie' ) and ( defined $bwa_opts ) ) {
         die "Bowtie selected as the aligner yet BWA options specified.\n";
+    } elsif ( ( $aligner eq 'bowtie' ) and ( defined $minimap2_opts ) ) {
+        die "Bowtie selected as the aligner yet minimap2 options specified.\n";
     } elsif ( ( $aligner eq 'bowtie2' ) and ( defined $bowtie_opts ) ) {
         die "Bowtie 2 selected as the aligner yet bowtie options specified.\n";
     } elsif ( ( $aligner eq 'bowtie2' ) and ( defined $bwa_opts ) ) {
         die "Bowtie 2 selected as the aligner yet BWA options specified.\n";
+    } elsif ( ( $aligner eq 'bowtie2' ) and ( defined $minimap2_opts ) ) {
+        die "Bowtie 2 selected as the aligner yet minimap2 options specified.\n";
     } elsif ( ( $aligner eq 'bwa' ) and ( defined $bowtie_opts ) ) {
         die "BWA selected as the aligner yet Bowtie options specified.\n";
     } elsif ( ( $aligner eq 'bwa' ) and ( defined $bowtie2_opts ) ) {
         die "BWA selected as the aligner yet Bowtie 2 options specified.\n";
+    } elsif ( ( $aligner eq 'bwa' ) and ( defined $minimap2_opts ) ) {
+        die "BWA selected as the aligner yet minimap2 options specified.\n";
+    } elsif ( ( $aligner eq 'minimap2' ) and ( defined $bwa_opts ) ) {
+        die "minimap2 selected as the aligner yet BWA options specified.\n";
+    } elsif ( ( $aligner eq 'minimap2' ) and ( defined $bowtie_opts ) ) {
+        die "minimap2 selected as the aligner yet Bowtie options specified.\n";
+    } elsif ( ( $aligner eq 'minimap2' ) and ( defined $bowtie2_opts ) ) {
+        die "minimap2 selected as the aligner yet Bowtie 2 options specified.\n";
     }
 }
 
@@ -228,6 +242,7 @@ $bowtie_opts  = '' unless (defined $bowtie_opts);     # Get undef warnings other
 $bowtie2_opts = '' unless (defined $bowtie2_opts);
 $bwa_opts = '' unless (defined $bwa_opts);
 $bismark_opts = '' unless (defined $bismark_opts);
+$minimap2_opts = '' unless (defined $minimap2_opts);
 
 # Configuration
 my $number_of_threads = 1;
@@ -242,6 +257,9 @@ chomp $path_to_bismark if(defined $path_to_bismark);
 
 my $path_to_bwa = `which bwa 2>/dev/null` eq '' ? undef : `which bwa`;
 chomp $path_to_bwa if(defined $path_to_bwa);
+
+my $path_to_minimap2 = `which minimap2 2>/dev/null` eq '' ? undef : `which minimap2`;
+chomp $path_to_minimap2 if(defined $path_to_minimap2);
 
 my $path_to_samtools = `which samtools 2>/dev/null` eq '' ? undef : `which samtools`;
 chomp $path_to_samtools if(defined $path_to_samtools);
@@ -494,7 +512,7 @@ sub process_file {
         $library_index++;
 
         if ($bisulfite) {
-        	die "The aligner BWA may not be used in --bisulfite mode, please adjust configuration.\n" if($aligner eq 'bwa');
+        	die "The aligners BWA or minimap2 may not be used in --bisulfite mode, please adjust configuration.\n" if(($aligner eq 'bwa') or ($aligner eq 'minimap2'));
             bisulfite_mapping( $illumina_flag, $library, $file, $error_filename, $library_index, $error_fh, \@index_genomes, \@bisulfite_orientation );
         } else {
             conventional_mapping( $illumina_flag, $read_length, $library, $file, $error_filename, \@index_genomes, $library_index, $error_fh );
@@ -1255,8 +1273,12 @@ sub conventional_mapping {
         $aligner_command = "$path_to_bowtie $bowtie_opts --sam $illumina_flag -l $read_length -k 2 --chunkmbs 512 -p $number_of_threads $library->[1] \'$file\' 2>$error_filename |";
     } elsif ($aligner eq 'bowtie2') {    #Using Bowtie2
         $aligner_command = "$path_to_bowtie2 $bowtie2_opts $illumina_flag -k 2 --very-fast-local --no-hd --no-unal -p $number_of_threads -x $library->[1] -U \'$file\' 2>$error_filename |";
-    } else {    #BWA
+    } elsif ($aligner eq 'bwa')  {    #BWA
     	$aligner_command = "$path_to_bwa mem -a $bwa_opts $illumina_flag -t $number_of_threads $library->[1] \'$file\' 2>$error_filename |";
+    } elsif ($aligner eq 'minimap2')  {    #minimap2
+    	$aligner_command = "$path_to_minimap2 -a $minimap2_opts $illumina_flag -t $number_of_threads $library->[1].fa.gz \'$file\' 2>$error_filename |";
+    } else {
+        die "Unknown aligner";
     }
 
     open( ALIGNER, $aligner_command ) or die "Failed to launch aligner command '$aligner_command': $!";
@@ -1348,9 +1370,11 @@ sub load_configuration {
         my $bowtie1_path_exists             = 0;
         my $bowtie2_path_exists             = 0;
         my $bwa_path_exists                 = 0;
+        my $minimap2_path_exists            = 0;
         my $bowtie1_database_exists         = 0;
         my $bowtie2_database_exists         = 0;
         my $bwa_database_exists             = 0;
+        my $minimap2_database_exists        = 0;
 
         while (<CONF>) {
             chomp;
@@ -1374,6 +1398,10 @@ sub load_configuration {
                 if ( defined( ( split( /\s+/, $_, 2 ) )[1] ) ) {
                     $bwa_path_exists = 1;
                 }
+            } elsif ( $name eq 'MINIMAP2' ) {
+                if ( defined( ( split( /\s+/, $_, 2 ) )[1] ) ) {
+                    $minimap2_path_exists = 1;
+                }
             } elsif ( $name eq 'DATABASE' ) {
                 my ( undef, $database_name, $database_path ) = split( /\s+/, $_, 4 );
 				
@@ -1387,6 +1415,9 @@ sub load_configuration {
                 }
                 if ( -e "$database_path.amb" ) {
                     $bwa_database_exists = 1;
+                }
+                if ( -e "$database_path.fa.gz" ) {
+                    $minimap2_database_exists = 1;
                 }
             }
         }
@@ -1408,6 +1439,9 @@ sub load_configuration {
             } elsif ( $bwa_path_exists and $bwa_database_exists ) {
                 $aligner = 'bwa';
                 warn "Aligner (--aligner) not specified, but BWA path and index files found: mapping with BWA\n" unless ($quiet);
+            } elsif ( $minimap2_path_exists and $minimap2_database_exists ) {
+                $aligner = 'minimap2';
+                warn "Aligner (--aligner) not specified, but minimap2 path and index files found: mapping with minimap2\n" unless ($quiet);
             } else {
                 warn "Aligner (--aligner) not specified. Did not find Bowtie/Bowtie2/BWA paths and/or index files\n";
                 warn "Please check: you have provided the full path to the aligner INCLUDING the executable filename\n";
@@ -1452,6 +1486,12 @@ sub load_configuration {
             warn "Using '$path_to_bwa' as BWA path\n" unless ($quiet);
         }
 
+        elsif ( ( $name eq 'MINIMAP2' ) and ( $aligner eq 'minimap2' ) ) {
+            $path_to_minimap2 = ( split( /\s+/, $_, 2 ) )[1];
+            die "Empty value set for MINIMAP2 config parameter\n" unless ($path_to_minimap2);
+            warn "Using '$path_to_minimap2' as minimap2 path\n" unless ($quiet);
+        }
+
         elsif ( $name eq 'BISMARK' and $bisulfite ) {
             $path_to_bismark = ( split( /\s+/, $_, 2 ) )[1];
             die "Empty value set for BISULFITE config parameter\n" unless ($path_to_bismark);
@@ -1494,12 +1534,20 @@ sub load_configuration {
 						$database_skipped_flag = 1;
                         next;
                     }
-                } else {    #BWA
+                } elsif ( $aligner eq 'bwa' ) {    #BWA
                     unless ( -e "$db_path.amb" ) {
                         warn "Skipping DATABASE '$db_name' since no BWA index was found at '$db_path'\n";
 						$database_skipped_flag = 1;
                         next;
                     }
+                } elsif ( $aligner eq 'minimap2' ) {    #minimap2
+                    unless ( -e "$db_path.fa" or -e "$db_path.fa.gz" ) {
+                        warn "Skipping DATABASE '$db_name' since no minimap2 index was found at '$db_path'\n";
+						$database_skipped_flag = 1;
+                        next;
+                    }
+                } else {
+                    die "Unknown aligner ($aligner)";
                 }
             }
 
@@ -1532,8 +1580,8 @@ sub load_configuration {
         }
     }
 
-    if($illumina and $aligner eq 'bwa'){
-    	die "Cannot specify --illumina1_3 when using BWA as the alinger, specify Bowtie or Bowtie 2 instead.\n";
+    if($illumina and ( $aligner eq 'bwa' or $aligner eq 'minimap2' )){
+    	die "Cannot specify --illumina1_3 when using BWA or minimap2 as the alinger, specify Bowtie or Bowtie 2 instead.\n";
     }
 	
 	if(defined $tag){
@@ -1554,6 +1602,8 @@ sub load_configuration {
 		die "Aligner $aligner not exectable at '$path_to_bowtie2', please adjust configuration.\n" unless( (-x $path_to_bowtie2) or ($path_to_bowtie2 eq 'bowtie2') );
 	}elsif($aligner eq 'bwa'){
 		die "Aligner $aligner not exectable at '$path_to_bwa', please adjust configuration.\n" unless( (-x $path_to_bwa) or ($path_to_bwa eq 'bwa') );
+	}elsif($aligner eq 'minimap2'){
+		die "Aligner $aligner not exectable at '$path_to_minimap2', please adjust configuration.\n" unless( (-x $path_to_minimap2) or ($path_to_minimap2 eq 'minimap2') );
 	}
 
 	if ($bisulfite and (defined $path_to_bismark) ) {
@@ -2508,7 +2558,8 @@ Options
                       'Database name','Genome path and basename','Notes'
 
  --aligner <func>     Specify the aligner to use for the mapping. Valid 
-                      arguments are 'bowtie', bowtie2' (default) or 'bwa'.  
+                      arguments are 'bowtie', bowtie2' (default), 'bwa' 
+                      or 'minimap2'.  
                       Bowtie maps with parameters -k 2, Bowtie 2 with 
                       parameters -k 2 --very-fast-local and BWA with mem -a.  
                       Local aligners such as BWA or Bowtie2 will be better 
@@ -2551,6 +2602,15 @@ Options
                       parameters. You should not try to use this option 
                       to override the normal search or reporting options 
                       for BWA which are set automatically but it might 
+                      be useful to allow reads to be trimmed before
+                      alignment etc. 
+
+ --minimap2 <text>    Specify extra parameters to be passed to BWA. 
+                      These parameters should be quoted to clearly 
+                      delimit minimap2 parameters from FastQ Screen 
+                      parameters. You should not try to use this option 
+                      to override the normal search or reporting options 
+                      for minimap2 which are set automatically but it might 
                       be useful to allow reads to be trimmed before
                       alignment etc. 
 
