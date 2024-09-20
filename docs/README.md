@@ -255,9 +255,9 @@ FastQ Screen Options Summary
 ============================
  **add_genome \<text\> :**  Edits the file 'fastq_screen.conf' (in the folder where this script is saved) to add a new genome. Specify the additional genome as a comma separated list: 'Database name','Genome path and basename','Notes'
 
-**aligner \<func\> :**  Specify the aligner to use for the mapping. Valid arguments are 'bowtie', bowtie2' (default) or 'bwa'.  Bowtie maps with parameters -k 2, Bowtie 2 with parameters -k 2 --very-fast-local and BWA with mem -a.  Local aligners such as BWA or Bowtie2 will be better at detecting the origin of chimeric reads.
+**aligner \<func\> :**  Specify the aligner to use for the mapping. Valid arguments are 'bowtie', bowtie2' (default), 'bwa' or 'minimap2'.  Bowtie maps with parameters -k 2, Bowtie 2 with parameters -k 2 --very-fast-local, BWA with mem -a and minimap2 uses default settings.  Local aligners such as BWA or Bowtie2 will be better at detecting the origin of chimeric reads.
 
-**bisulfite :**  Process bisulfite libraries. Bismark runs in non-directional mode. The path to the bisulfite aligner (Bismark) may be specified in the configuration file. Either conventional or bisulfite libraries may be processed, but not both simultaneously.  The --bisulfite option cannot be used in conjunction with --bwa.
+**bisulfite :**  Process bisulfite libraries. Bismark runs in non-directional mode. The path to the bisulfite aligner (Bismark) may be specified in the configuration file. Either conventional or bisulfite libraries may be processed, but not both simultaneously. The --bisulfite option cannot be used in conjunction with --bwa.
 
 **bismark \<text\> :**  Specify extra parameters to be passed to Bismark. These parameters should be quoted to clearly delimit Bismark parameters from FastQ Screen parameters. 
 
@@ -266,6 +266,8 @@ FastQ Screen Options Summary
 **bowtie2 \<text\> :**  Specify extra parameters to be passed to Bowtie 2. These parameters should be quoted to clearly delimit Bowtie 2 parameters from FastQ Screen parameters. You should not try to use this option to override the normal search or reporting options for bowtie which are set automatically but it might be useful to allow reads to be trimmed before alignment etc.  
 
 **bwa \<text\> :**  Specify extra parameters to be passed to BWA. These parameters should be quoted to clearly delimit BWA parameters from FastQ Screen parameters. You should not try to use this option to override the normal search or reporting options for BWA which are set automatically but it might be useful to allow reads to be trimmed before alignment etc. 
+
+**minimap2 \<text\> :** Specify extra parameters to be passed to Minimap2. These parameters should be quoted to clearly delimit BWA parameters from FastQ Screen parameters. You should not try to use this option to override the normal search or reporting options for BWA which are set automatically but it might be useful to allow reads to be trimmed before alignment etc. 
 
 **conf \<path\> :**  Manually specify a location for the configuration.
  

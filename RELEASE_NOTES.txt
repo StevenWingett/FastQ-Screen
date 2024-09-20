@@ -1,5 +1,15 @@
+Release notes for FastQ Screen v0.16.0 (20 September 2024)
+----------------------------------------------------------
+Added functionality to process long sequence reads by using 
+Minimap2 as the aligner.
+
+We would like to thank Martin Pollard (Wellcome Sanger 
+Institute, UK) for contributing this improvement.
+
+
+
 Release notes for FastQ Screen v0.15.3 (03 April 2023)
---------------------------------------------------------
+------------------------------------------------------
 Fixed filtering bug causing the final filtered FASTQ 
 file to have the file extension .fastq when it should be 
 .fastq.gz, since the file is actually gzipped.

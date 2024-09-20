@@ -13,15 +13,16 @@ use File::Path;
 use Data::Dumper;
 
 
-our $VERSION = "0.15.3";
+our $VERSION = "0.16.0";
 
 ###########################################################################
 ###########################################################################
 ##                                                                       ##
-## Copyright 2023, Simon Andrews    (The Babraham Institute, UK)         ##
+## Copyright 2024, Simon Andrews    (The Babraham Institute, UK)         ##
 ##                 Steven Wingett   (MRC-LMB, Cambridge, UK)             ##
 ##                 Felix Krueger    (The Babraham Institute, UK)         ##
 ##                 Mark Fiers       (Plant & Food Research, NZ)          ##
+##                 Martin Pollard   (Wellcome Sanger Institute, UK)      ##
 ##                                                                       ##
 ## This program is free software: you can redistribute it and/or modify  ##
 ## it under the terms of the GNU General Public License as published by  ##
@@ -2731,4 +2732,4 @@ Options
 
 --version             Print the program version and exit.
 
-2020 Babraham Institute, Cambridge, UK 
+2024 Babraham Institute, Cambridge, UK 
