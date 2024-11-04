@@ -13,7 +13,7 @@ use File::Path;
 use Data::Dumper;
 
 
-our $VERSION = "0.16.0";
+our $VERSION = "0.16.1.dev";
 
 ###########################################################################
 ###########################################################################
@@ -1414,7 +1414,7 @@ sub load_configuration {
                 if ( -e "$database_path.1.bt2" or -e "$database_path.1.bt2l" ) {
                     $bowtie2_database_exists = 1;
                 }
-                if ( -e "$database_path.amb" ) {
+                if ( -e "$database_path.amb" or -e "$database_path.64.amb" ) {
                     $bwa_database_exists = 1;
                 }
                 if ( -e "$database_path.fa.gz" ) {
@@ -1536,7 +1536,7 @@ sub load_configuration {
                         next;
                     }
                 } elsif ( $aligner eq 'bwa' ) {    #BWA
-                    unless ( -e "$db_path.amb" ) {
+                    unless ( -e "$db_path.amb" or -e "$db_path.64.amb" ) {
                         warn "Skipping DATABASE '$db_name' since no BWA index was found at '$db_path'\n";
 						$database_skipped_flag = 1;
                         next;
