@@ -2467,7 +2467,12 @@ sub get_genomes{
 	#to a permanent location on the webserver, when more space is made available.
 	my $location_file = 'www.bioinformatics.babraham.ac.uk/projects/fastq_screen/genome_locations.txt';
 	my $command = "wget --no-check-certificate $location_file";	
-	!system($command) or die "Could not run command '$command'\n";
+	if(system($command)) {
+        warn "HTTP download failed, retrying with HTTPS...\n";
+        $location_file = 'https://www.bioinformatics.babraham.ac.uk/projects/fastq_screen/genome_locations.txt';
+        $command = "wget --no-check-certificate $location_file";
+        !system($command) or die "Could not run command '$command'\n";
+    }
 	$location_file = 'genome_locations.txt';
 	open(LOCATION, '<', $location_file) or die "Could not open '$location_file' : $!";
 	scalar <LOCATION> if $bisulfite;   #Use second line in file if --bisulfite mode
