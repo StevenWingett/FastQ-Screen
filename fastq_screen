@@ -1327,7 +1327,7 @@ sub bisulfite_mapping {
     my $bismark_report_file = $mapped_file;
     $bismark_report_file =~ s/\.sam$|\.bam$/_SE_report.txt/;
     unlink $bismark_report_file or die "Could not delete Bismark report file '$bismark_report_file'.\n";
-	unlink $ambiguous_file or die "Could not delete Bismark amibiguous reads outputfile '$ambiguous_file'.\n";
+	unlink $ambiguous_file or die "Could not delete Bismark ambiguous reads output file '$ambiguous_file'.\n";
 
     return (\%local_hits, \@bs_counts);
 }
