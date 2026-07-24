@@ -72,33 +72,35 @@ my $pass;
 my $inverse = 0;
 my $get_genomes;
 my $add_genome;
+my $parallel_genomes = 1;
 
 my $config_result = GetOptions(
-    "subset=i"    => \$subset_count,
-    "outdir=s"    => \$outdir,
-    "illumina1_3" => \$illumina,
-    "quiet"       => \$quiet,
-    "help"        => \$help,
-    "version"     => \$version,
-    "conf=s"      => \$conf,
-    "bowtie=s"    => \$bowtie_opts,
-    "bowtie2=s"   => \$bowtie2_opts,
-    "bismark=s"   => \$bismark_opts,
-    "bwa=s"       => \$bwa_opts,
-    "minimap2=s"  => \$minimap2_opts,
-    "threads=i"   => \$threads,
-    "nohits"      => \$nohits,
-    "aligner=s"   => \$aligner,
-    "force"       => \$force,
-    "paired"      => \$paired,
-    "bisulfite"   => \$bisulfite,
-    "tag"         => \$tag,
-	"filter=s"	  => \$filter,
-    "top=s"       => \$top,
-	"pass=i"	  => \$pass,
-	"inverse"     => \$inverse,
-	"get_genomes" => \$get_genomes,
-    "add_genome=s" => \$add_genome,
+    "subset=i"           => \$subset_count,
+    "outdir=s"           => \$outdir,
+    "illumina1_3"        => \$illumina,
+    "quiet"              => \$quiet,
+    "help"               => \$help,
+    "version"            => \$version,
+    "conf=s"             => \$conf,
+    "bowtie=s"           => \$bowtie_opts,
+    "bowtie2=s"          => \$bowtie2_opts,
+    "bismark=s"          => \$bismark_opts,
+    "bwa=s"              => \$bwa_opts,
+    "minimap2=s"         => \$minimap2_opts,
+    "threads=i"          => \$threads,
+    "nohits"             => \$nohits,
+    "aligner=s"          => \$aligner,
+    "force"              => \$force,
+    "paired"             => \$paired,
+    "bisulfite"          => \$bisulfite,
+    "tag"                => \$tag,
+	"filter=s"	         => \$filter,
+    "top=s"              => \$top,
+	"pass=i"	         => \$pass,
+	"inverse"            => \$inverse,
+	"get_genomes"        => \$get_genomes,
+    "add_genome=s"       => \$add_genome,
+    "parallel_genomes=i" => \$parallel_genomes,
 );
 
 die "Could not parse options, please adjust configuration.\n" unless ($config_result);
@@ -239,6 +241,8 @@ if( (defined $bismark_opts) and (!defined $bisulfite) ){
 	die "Option --bismark may not be specified without --bisulfite\n";
 }
 
+die "Option --parallel_genomes must be a positive integer.\n" if ($parallel_genomes < 1);
+
 $bowtie_opts  = '' unless (defined $bowtie_opts);     # Get undef warnings otherwise
 $bowtie2_opts = '' unless (defined $bowtie2_opts);
 $bwa_opts = '' unless (defined $bwa_opts);
@@ -339,6 +343,13 @@ if ( ( ( 1 << 32 ) != 4294967296 ) and ( scalar @libraries > 15 ) ) {    #32-bit
     die "Maximum number of reference genomes exceeded, please adjust configuration and specify at most 32 libraries.\n";
 }
 
+if ($parallel_genomes > 1) {
+    my $total_cpus = $parallel_genomes * $number_of_threads;
+    warn "Running $parallel_genomes genome alignments in parallel (total CPU usage approximately $total_cpus threads)\n" unless ($quiet);
+    eval { require Parallel::ForkManager }
+        or die "Parallel::ForkManager is required when --parallel_genomes > 1.\n"
+              . "Install it with: cpanm Parallel::ForkManager\n";
+}
 
 die "No files to process\n" unless (@files);
 
@@ -488,12 +499,58 @@ sub process_file {
 
     $file = $temp_file;
 
-    my $library_index = -1;                                              # Make lists in the same order as @libraries
+    # Check bisulfite/aligner compatibility once before the loop (does not vary per library)
+    if ($bisulfite) {
+        die "The aligners BWA or minimap2 may not be used in --bisulfite mode, please adjust configuration.\n"
+            if (($aligner eq 'bwa') or ($aligner eq 'minimap2'));
+    }
 
-    foreach my $library (@libraries) {
+    # Set up Parallel::ForkManager when parallel_genomes > 1.
+    # When parallel_genomes == 1 (default), $pm is undef and the loop runs sequentially,
+    # preserving byte-for-byte identical output to the previous implementation.
+    my $pm;
+    if ($parallel_genomes > 1) {
+        $pm = Parallel::ForkManager->new($parallel_genomes);
 
-        #Write Bowtie/Bowtie2 Standard Error to a temporary output file
-        #Generate a random filename and place in $outdir (if specified)
+        # Merge per-library results returned by each child into the shared arrays.
+        # Each library owns a fixed, non-overlapping set of bits in @index_genomes
+        # determined by $library_index, so bitwise OR is safe regardless of child
+        # completion order.
+        $pm->run_on_finish(sub {
+            my ($pid, $exit_code, $ident, $exit_signal, $core_dump, $data) = @_;
+            return unless defined $data;
+            my ($lib_idx, $hits_ref, $bs_counts) = @$data;
+
+            # Merge per-read hit bitmask contributions via bitwise OR
+            while (my ($seqname, $val) = each %$hits_ref) {
+                $index_genomes[$seqname] = ($index_genomes[$seqname] // 0) | $val;
+            }
+
+            if ($bisulfite) {
+                $bisulfite_orientation[$lib_idx] = $bs_counts;
+            }
+        });
+    }
+
+    for (my $library_index = 0; $library_index < @libraries; $library_index++) {
+        my $library = $libraries[$library_index];
+
+        warn "Searching " . basename($file) . " against $library->[0]\n" unless ($quiet);
+
+        my $illumina_flag = '';
+        if ($illumina) {
+            $illumina_flag = '--phred64-quals';
+        }
+
+        if ($parallel_genomes > 1) {
+            $pm->start and next;    # parent resumes loop; child continues below
+        }
+
+        # === This block runs in the child (parallel) or inline (sequential) ===
+
+        # Create per-invocation error temp file after the fork so each child
+        # gets its own unique file; tempfile() generates a random name which is
+        # safe even without forking.
         my $error_fh;
         my $error_filename;
         if ($outdir) {
@@ -502,22 +559,32 @@ sub process_file {
             ( $error_fh, $error_filename ) = tempfile( 'aligner_standard_error.XXXXXXXX', SUFFIX => '.txt' );
         }
 
-        warn "Searching " . basename($file) . " against $library->[0]\n" unless ($quiet);
-
-        my $illumina_flag = '';
-        if($illumina){
-        	$illumina_flag = '--phred64-quals';
-        }
-
-        #Count the index of the library being used
-        $library_index++;
-
+        my ($hits_ref, $bs_counts);
         if ($bisulfite) {
-        	die "The aligners BWA or minimap2 may not be used in --bisulfite mode, please adjust configuration.\n" if(($aligner eq 'bwa') or ($aligner eq 'minimap2'));
-            bisulfite_mapping( $illumina_flag, $library, $file, $error_filename, $library_index, $error_fh, \@index_genomes, \@bisulfite_orientation );
+            # Bismark writes output files prefixed with $library->[0] (the genome/database
+            # name), e.g. "Human.sample_bismark_bt2.bam".  Because every library has a
+            # unique name in the configuration, parallel children for different libraries
+            # will never write to the same file.
+            ($hits_ref, $bs_counts) = bisulfite_mapping( $illumina_flag, $library, $file, $error_filename, $library_index, $error_fh );
         } else {
-            conventional_mapping( $illumina_flag, $read_length, $library, $file, $error_filename, \@index_genomes, $library_index, $error_fh );
+            $hits_ref = conventional_mapping( $illumina_flag, $read_length, $library, $file, $error_filename, $library_index, $error_fh );
         }
+
+        if ($parallel_genomes > 1) {
+            $pm->finish(0, [$library_index, $hits_ref, $bs_counts]);
+        } else {
+            # Sequential case: merge results immediately
+            while (my ($seqname, $val) = each %$hits_ref) {
+                $index_genomes[$seqname] = ($index_genomes[$seqname] // 0) | $val;
+            }
+            if ($bisulfite) {
+                $bisulfite_orientation[$library_index] = $bs_counts;
+            }
+        }
+    }
+
+    if ($parallel_genomes > 1) {
+        $pm->wait_all_children;
     }
 
     # Collate the hit results from the Bowtie searches.
@@ -1119,11 +1186,17 @@ sub datestampGenerator {
 
 
 
-#Uses Bismark to map an input file to a specified genome
-#Results stored in the @index_genomes array
+#Uses Bismark to map an input file to a specified genome.
+#Returns a hashref of per-read hit values { seqname => bitmask_value } and
+#an arrayref of bisulfite orientation counts [OT, CTOT, CTOB, OB].
+#The bitmask values use only the two bits owned by $library_index; the caller
+#merges them into the shared @index_genomes array via bitwise OR.
 sub bisulfite_mapping {
 
-    my ( $illumina_flag, $library, $file, $error_filename, $library_index, $error_fh, $index_genomes_ref, $bisulfite_orientation_ref ) = @_;
+    my ( $illumina_flag, $library, $file, $error_filename, $library_index, $error_fh ) = @_;
+    my %local_hits;
+    my @bs_counts = (0, 0, 0, 0);    # [OT, CTOT, CTOB, OB]
+
     my $bismark_command;
     my $sam_output_option = '';
     $sam_output_option = '--sam' unless ( defined $path_to_samtools );
@@ -1186,10 +1259,8 @@ sub bisulfite_mapping {
 		next if ( substr( $line, 0, 1 ) eq '@' );
 
 		my ($seqname) = split( /\./, $line );    #Extract the index id
-		unless ( defined ${$index_genomes_ref}[$seqname] ) {
-		    ${$index_genomes_ref}[$seqname] = 0;    #Initialise - array may have 'gaps'
-		}
-		${$index_genomes_ref}[$seqname] = record_hit( ${$index_genomes_ref}[$seqname], $library_index + 1 );
+		$local_hits{$seqname} //= 0;
+		$local_hits{$seqname} = record_hit( $local_hits{$seqname}, $library_index + 1 );
 
 		#Now determine the directionality of the read 
 		my $read_conversion;
@@ -1208,13 +1279,13 @@ sub bisulfite_mapping {
 		}
 
     	if ($read_conversion eq 'CT' and $genome_conversion eq 'CT') { ## original top strand OT
-    		${ $bisulfite_orientation_ref }[$library_index]->[0]++;
+    		$bs_counts[0]++;
     	} elsif ($read_conversion eq 'GA' and $genome_conversion eq 'CT') { ## complementary to original top strand CTOT
-    		${ $bisulfite_orientation_ref }[$library_index]->[1]++;
+    		$bs_counts[1]++;
         } elsif ($read_conversion eq 'GA' and $genome_conversion eq 'GA') { ## complementary to original bottom strand CTOB
-        	${ $bisulfite_orientation_ref }[$library_index]->[2]++;
+        	$bs_counts[2]++;
         } elsif ($read_conversion eq 'CT' and $genome_conversion eq 'GA') { ## original bottom strand OB
-        	${ $bisulfite_orientation_ref }[$library_index]->[3]++;
+        	$bs_counts[3]++;
         } else {
 			die "Unexpected combination of read and genome conversion: '$read_conversion' / '$genome_conversion'\n";
     	}
@@ -1232,12 +1303,9 @@ sub bisulfite_mapping {
 		$seqname = substr($seqname, 1);   #Ignore @
 		
 		#Record twice, so reads from the ambiguous file are considered as multi-mapping
-		unless ( defined ${$index_genomes_ref}[$seqname] ) {
-		    ${$index_genomes_ref}[$seqname] = 0;    #Initialise - array may have 'gaps'
-		}
-		
-		${$index_genomes_ref}[$seqname] = record_hit( ${$index_genomes_ref}[$seqname], $library_index + 1 );
-		${$index_genomes_ref}[$seqname] = record_hit( ${$index_genomes_ref}[$seqname], $library_index + 1 );	
+		$local_hits{$seqname} //= 0;
+		$local_hits{$seqname} = record_hit( $local_hits{$seqname}, $library_index + 1 );
+		$local_hits{$seqname} = record_hit( $local_hits{$seqname}, $library_index + 1 );
 		
 		scalar <AMBIGUOUS_FILE>;   #Ignore rest of FASTQ read
 		scalar <AMBIGUOUS_FILE>;
@@ -1259,14 +1327,20 @@ sub bisulfite_mapping {
     my $bismark_report_file = $mapped_file;
     $bismark_report_file =~ s/\.sam$|\.bam$/_SE_report.txt/;
     unlink $bismark_report_file or die "Could not delete Bismark report file '$bismark_report_file'.\n";
-	unlink $ambiguous_file or die "Could not delete Bismark amibiguous reads outputfile '$ambiguous_file'.\n";
+	unlink $ambiguous_file or die "Could not delete Bismark ambiguous reads output file '$ambiguous_file'.\n";
+
+    return (\%local_hits, \@bs_counts);
 }
 
 #Uses Bowtie or Bowtie2 to map an input file to a specified genome
-#Results stored in the @index_genomes array
+#Uses Bowtie or Bowtie2 to map an input file to a specified genome.
+#Returns a hashref of per-read hit values { seqname => bitmask_value } where the
+#bitmask values use only the two bits owned by $library_index.  The caller merges
+#them into the shared @index_genomes array via bitwise OR.
 sub conventional_mapping {
 
-    my ( $illumina_flag, $read_length, $library, $file, $error_filename, $index_genomes_ref, $library_index, $error_fh ) = @_;
+    my ( $illumina_flag, $read_length, $library, $file, $error_filename, $library_index, $error_fh ) = @_;
+    my %local_hits;
     my $aligner_command;
 
     #Determine whether to execute bowtie1 or bowtie2
@@ -1297,10 +1371,8 @@ sub conventional_mapping {
        	($seqname) = split(/\./, $seqname); 
         next if $samFlag & 0x4;    #Did not align
 
-        unless ( defined ${$index_genomes_ref}[$seqname] ) {
-            ${$index_genomes_ref}[$seqname] = 0;    #Initialise - array may have 'gaps'
-        }
-        ${$index_genomes_ref}[$seqname] = record_hit( ${$index_genomes_ref}[$seqname], $library_index + 1 );
+        $local_hits{$seqname} //= 0;
+        $local_hits{$seqname} = record_hit( $local_hits{$seqname}, $library_index + 1 );
     }
 
     #Check the Standard Error output file and report any errors
@@ -1315,6 +1387,8 @@ sub conventional_mapping {
     }
     close $error_fh;
     unlink $error_filename or die "Could not delete temporary Standard Error file '$error_filename' : $!";
+
+    return \%local_hits;
 }
 
 sub remove_duplicates {
@@ -2676,6 +2750,14 @@ Options
                       If no directory is specified then output files
                       are saved in the current working directory.
 					  
+ --parallel_genomes <int>
+                      Align against this many reference genomes in parallel.
+                      Defaults to 1 (sequential, identical to previous
+                      behaviour). When set above 1, total CPU usage is
+                      approximately parallel_genomes * threads cores.
+                      Requires the Perl module Parallel::ForkManager when
+                      set above 1 (install with: cpanm Parallel::ForkManager).
+
  --pass <int>         Used in conjunction with --filter. By default all
                       genome filters must be passed for a read to pass
                       the --filter option.  However, a minimum number 
